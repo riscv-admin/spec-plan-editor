@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RISC-V Spec Plan Editor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4285f4;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+
+        .info-bar {
+            background-color: #f1f3f4;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1em;
+            color: #333;
+        }
+
+        .summary-bar {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+
+        .summary-item {
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+            font-size: 0.9em;
+            min-width: 120px;
+        }
+
+        .summary-item.inception {
+            background-color: #8e44ad;
+        }
+
+        .summary-item.plan {
+            background-color: #2980b9;
+        }
+
+        .summary-item.development {
+            background-color: #27ae60;
+        }
+
+        .summary-item.freeze {
+            background-color: #e67e22;
+        }
+
+        .summary-item.ratification-ready {
+            background-color: #c0392b;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: #4285f4;
+            color: white;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .slider {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .button {
+            padding: 10px 15px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1em;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .button.small {
+            padding: 5px 10px;
+            font-size: 0.9em;
+        }
+
+        .button.blue {
+            background-color: #4285f4;
+        }
+
+        .button:hover {
+            opacity: 0.9;
+        }
+
+        /* Lightweight color for rows based on phases */
+        tr.inception {
+            background-color: rgba(142, 68, 173, 0.1);
+        }
+
+        tr.plan {
+            background-color: rgba(41, 128, 185, 0.1);
+        }
+
+        tr.development {
+            background-color: rgba(39, 174, 96, 0.1);
+        }
+
+        tr.freeze {
+            background-color: rgba(230, 126, 34, 0.1);
+        }
+
+        tr.ratification-ready {
+            background-color: rgba(192, 57, 43, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>RISC-V Spec Plan Editor</h1>
+
+    <div id="summary-bar" class="summary-bar">
+        <!-- Dynamic summary will be updated here -->
+    </div>
+    <div id="info-bar" class="info-bar">
+        <!-- This will be dynamically updated with JavaScript -->
+    </div>
+    <table id="timeline-table">
+        <thead>
+            <tr>
+                <th>Phase</th>
+                <th>Activity</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Duration (Days)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for phase, activity, start_date, end_date, duration in calculated_dates %}
+            <tr data-phase="{{ phase }}" class="{{ phase|lower|replace(' ', '-') }}" data-default-duration="{{ duration }}">
+                <td>{{ phase }}</td>
+                <td>{{ activity }}</td>
+                <td class="start-date">
+                    {% if loop.first %}
+                        <input type="date" id="inception-start-date" value="{{ current_date }}" onchange="updateDates()">
+                    {% else %}
+                        {{ start_date }}
+                    {% endif %}
+                </td>
+                <td class="end-date">{{ end_date }}</td>
+                <td>
+                    <div class="slider-container">
+                        <input type="range" class="slider" name="{{ activity.replace(' ', '_') }}_duration" value="{{ duration }}" min="0" max="200" oninput="updateSlider(this)">
+                        <span class="slider-value">{{ duration }}</span>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="button-container">
+        <button class="button small" onclick="resetToDefault()">Reset to Default</button>
+        <button class="button blue small" onclick="exportCSV()">Export CSV</button>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set the default date for Inception to the current date
+        const inceptionDateInput = document.getElementById('inception-start-date');
+        const currentDate = new Date().toISOString().split('T')[0];
+        inceptionDateInput.value = currentDate;
+
+        // Update dates based on the current default inception start date
+        updateDates();
+    });
+
+    function getLastThursday(year, month) {
+        const lastDay = new Date(year, month + 1, 0);
+        const offset = (lastDay.getDay() - 4 + 7) % 7;
+        lastDay.setDate(lastDay.getDate() - offset);
+        return lastDay;
+    }
+
+    function updateSlider(element) {
+        const row = element.closest('tr');
+        const valueDisplay = row.querySelector('.slider-value');
+        valueDisplay.textContent = element.value;
+
+        updateDates();
+    }
+
+    function updateDates() {
+        const inceptionStartDate = document.getElementById('inception-start-date').value;
+        const rows = document.querySelectorAll('#timeline-table tbody tr');
+        let currentStartDate = new Date(inceptionStartDate);
+
+        rows.forEach((row, index) => {
+            const slider = row.querySelector('.slider');
+            const duration = parseInt(slider.value, 10);
+            const startDateElement = row.querySelector('.start-date input') || row.querySelector('.start-date');
+            const endDateElement = row.querySelector('.end-date');
+
+            // Set start date for the current row
+            startDateElement.textContent = currentStartDate.toISOString().split('T')[0];
+
+            // If duration is 0, set the end date to be the same as the start date
+            let endDate = new Date(currentStartDate);
+            if (duration !== 0) {
+                endDate.setDate(currentStartDate.getDate() + duration - 1);
+            } else {
+                endDate = currentStartDate;
+            }
+
+            endDateElement.textContent = endDate.toISOString().split('T')[0];
+
+            // Set the start date for the next row to the end date of the current row
+            currentStartDate = new Date(endDate);
+            if (duration !== 0) {
+                currentStartDate.setDate(currentStartDate.getDate() + 1);
+            }
+        });
+
+        // Ensure BoD Approval Date is the last Thursday of the correct month
+        updateBodApprovalDate();
+
+        updateInfoBar();
+        updateSummary();
+    }
+
+    function updateBodApprovalDate() {
+        const rows = document.querySelectorAll('#timeline-table tbody tr');
+        let lastEndDate = new Date(rows[rows.length - 2].querySelector('.end-date').textContent); // Get the TSC Approval end date
+
+        const bodApprovalRow = rows[rows.length - 1]; // BoD Approval row
+        adjustBodApprovalDate(bodApprovalRow, lastEndDate);
+    }
+
+    function adjustBodApprovalDate(row, tscEndDate) {
+        let bodApprovalDate = getLastThursday(tscEndDate.getFullYear(), tscEndDate.getMonth());
+
+        if (tscEndDate > bodApprovalDate) {
+            bodApprovalDate = getLastThursday(tscEndDate.getFullYear(), tscEndDate.getMonth() + 1);
+        }
+
+        row.querySelector('.start-date').textContent = bodApprovalDate.toISOString().split('T')[0];
+        row.querySelector('.end-date').textContent = bodApprovalDate.toISOString().split('T')[0];
+    }
+
+    function updateInfoBar() {
+        const timelineTable = document.getElementById('timeline-table');
+        const rows = timelineTable.querySelectorAll('tbody tr');
+        const lastRow = rows[rows.length - 1];
+        const bodEndDateText = lastRow.querySelector('.end-date').textContent;
+        const bodEndDate = new Date(bodEndDateText);
+
+        const quarter = Math.floor((bodEndDate.getMonth() + 3) / 3);
+        const year = bodEndDate.getFullYear();
+
+        const quarterText = `Q${quarter}${year}`;
+        const infoBar = document.getElementById('info-bar');
+        infoBar.textContent = `Ratification will happen in ${quarterText}, with the BoD meeting on ${bodEndDateText}.`;
+    }
+
+    function updateSummary() {
+    const phases = ['Inception', 'Plan', 'Development', 'Freeze', 'Ratification-Ready'];
+    const summaryBar = document.getElementById('summary-bar');
+    summaryBar.innerHTML = '';  // Clear existing content
+
+    phases.forEach(phase => {
+        const rows = document.querySelectorAll(`#timeline-table tbody tr[data-phase="${phase}"]`);
+        if (rows.length > 0) {
+            const startDate = rows[0].querySelector('.start-date').textContent;
+            const endDate = rows[rows.length - 1].querySelector('.end-date').textContent;
+
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            let duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+
+            // If start and end dates are the same, the duration should be 0
+            if (duration < 0) {
+                duration = 0;
+            }
+
+            const phaseClass = phase.toLowerCase().replace(/\s/g, '-');  // Convert phase name to a valid class name
+
+            const summaryItem = `
+                <div class="summary-item ${phaseClass}">
+                    <strong>${phase}</strong><br>
+                    End Date: ${endDate}<br>
+                    Duration: ${duration} days
+                </div>
+            `;
+
+            summaryBar.innerHTML += summaryItem;
+        }
+    });
+}
+
+    function resetToDefault() {
+        const rows = document.querySelectorAll('#timeline-table tbody tr');
+        rows.forEach(row => {
+            const defaultDuration = row.getAttribute('data-default-duration');
+            const slider = row.querySelector('.slider');
+            const valueDisplay = row.querySelector('.slider-value');
+            slider.value = defaultDuration;
+            valueDisplay.textContent = defaultDuration;
+        });
+        document.getElementById('inception-start-date').value = new Date().toISOString().split('T')[0];
+        updateDates();
+    }
+
+    function exportCSV() {
+    const rows = document.querySelectorAll('#timeline-table tbody tr');
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "\"Phase\",\"Activity\",\"Start Date\",\"End Date\",\"Duration (Days)\"\n";
+
+    rows.forEach(row => {
+        const phase = row.querySelector('td:nth-child(1)').textContent.trim();
+        const activity = row.querySelector('td:nth-child(2)').textContent.trim();
+        const startDate = row.querySelector('.start-date').textContent.trim();
+        const endDate = row.querySelector('.end-date').textContent.trim();
+        const duration = row.querySelector('.slider').value.trim();
+
+        const rowData = `"${phase}","${activity}","${startDate}","${endDate}","${duration}"\n`;
+        csvContent += rowData;
+    });
+
+    // Generate current date in YYYY-MM-DD format
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    // Create the file name with the current date
+    const fileName = `riscv-spec-plan-${currentDate}.csv`;
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+}
+
+    updateInfoBar();
+    updateSummary();
+</script>
+
+</body>
+</html>
