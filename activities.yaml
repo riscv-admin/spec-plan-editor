@@ -18,8 +18,8 @@ activities:
     - ["Committee Chairs Signoffs", 14]
     - ["RISC-V VP Signoff", 1]
   Ratification-Ready:
-    - ["Ratification-Ready Tasks", 15]
     - ["Public Review", 30]
+    - ["Ratification-Ready Tasks", 15]
     - ["ARC Ratification Approval (if substantial changes after public review)", 30]
     - ["RISC-V Compliance", 1]
     - ["Committee Chairs Signoffs", 7]
