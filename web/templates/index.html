@@ -1,394 +1,902 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/x-icon" href="static/favicon.ico" />
     <title>RISC-V Spec Plan Editor</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f8f9fa;
-            margin: 0;
-            padding: 0;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f8f9fa;
+        margin: 0;
+        padding: 0;
+      }
 
-        .container {
-            max-width: 1000px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: white;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-        }
+      .container {
+        max-width: 1000px;
+        margin: 20px auto;
+        padding: 20px;
+        background-color: white;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+      }
 
-        h1 {
-            text-align: center;
-            color: #4285f4;
-            font-size: 1.5em;
-            margin-bottom: 20px;
-        }
+      h1 {
+        text-align: center;
+        color: #0c2f6c;
+        font-size: 1.8em;
+        margin-bottom: 20px;
+      }
 
-        .info-bar {
-            background-color: #f1f3f4;
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 1em;
-            color: #333;
-        }
+      .info-bar {
+        background-color: #e0f2f7; /* Lighter blue */
+        padding: 10px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        text-align: center;
+        font-size: 1.2em;
+        color: #0d47a1; /* Darker blue text */
+      }
 
-        .summary-bar {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 20px;
-        }
+      .summary-bar {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 20px;
+      }
 
-        .summary-item {
-            padding: 10px;
-            border-radius: 8px;
-            color: white;
-            text-align: center;
-            font-size: 0.9em;
-            min-width: 120px;
-        }
+      .summary-item {
+        padding: 10px;
+        border-radius: 6px;
+        color: white;
+        text-align: center;
+        font-size: 0.7em;
+        min-width: 105px;
+      }
 
-        .summary-item.inception {
-            background-color: #8e44ad;
-        }
+      /* More distinct colors for summary items */
+      .summary-item.inception {
+        background-color: #9c27b0; /* Purple */
+      }
 
-        .summary-item.plan {
-            background-color: #2980b9;
-        }
+      .summary-item.planning {
+        background-color: #2196f3; /* Blue */
+      }
 
-        .summary-item.development {
-            background-color: #27ae60;
-        }
+      .summary-item.development {
+        background-color: #4caf50; /* Green */
+      }
 
-        .summary-item.freeze {
-            background-color: #e67e22;
-        }
+      .summary-item.stabilization {
+        background-color: #e91e63; /* Pink */
+      }
 
-        .summary-item.ratification-ready {
-            background-color: #c0392b;
-        }
+      .summary-item.freezing {
+        background-color: #ff9800; /* Orange */
+      }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            font-size: 0.9em;
-            border-radius: 8px;
-            overflow: hidden;
-        }
+      .summary-item.ratification-ready {
+        background-color: #f44336; /* Red */
+      }
 
-        table, th, td {
-            border: 1px solid #ddd;
-        }
+      .summary-item.publication {
+        background-color: #3f51b5; /* Indigo */
+      }
 
-        th, td {
-            padding: 8px;
-            text-align: left;
-            white-space: nowrap;
-        }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        font-size: 0.88em;
+        border-radius: 8px;
+        overflow: hidden;
+      }
 
-        th {
-            background-color: #4285f4;
-            color: white;
-        }
+      table,
+      th,
+      td {
+        border: 1px solid #ddd;
+      }
 
-        .slider-container {
-            display: flex;
-            align-items: center;
-        }
+      th,
+      td {
+        padding: 6px; /* Uniform padding across tables */
+        text-align: left; /* Left-align text */
+        border: 1px solid #ddd; /* Consistent border for both tables */
+      }
 
-        .slider {
-            flex-grow: 1;
-            margin-right: 10px;
-        }
+      th {
+        background-color: #2962ff; /* Darker blue */
+        color: white;
+      }
 
-        .button-container {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-        }
+      .slider-container {
+        display: flex;
+        align-items: center;
+      }
 
-        .button {
-            padding: 10px 15px;
-            background-color: #f44336;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 1em;
-            cursor: pointer;
-            text-align: center;
-        }
+      .slider {
+        flex-grow: 1;
+        margin-right: 10px;
+      }
 
-        .button.small {
-            padding: 5px 10px;
-            font-size: 0.9em;
-        }
+      .button-container {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+      }
 
-        .button.blue {
-            background-color: #4285f4;
-        }
+      .button {
+        padding: 10px 15px;
+        background-color: #f44336;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 1em;
+        cursor: pointer;
+        text-align: center;
+      }
 
-        .button:hover {
-            opacity: 0.9;
-        }
+      .button.small {
+        padding: 5px 10px;
+        font-size: 0.9em;
+      }
 
-        /* Lightweight color for rows based on phases */
-        tr.inception {
-            background-color: rgba(142, 68, 173, 0.1);
-        }
+      .button.blue {
+        background-color: #4285f4;
+      }
 
-        tr.plan {
-            background-color: rgba(41, 128, 185, 0.1);
-        }
+      .button:hover {
+        opacity: 0.9;
+      }
 
-        tr.development {
-            background-color: rgba(39, 174, 96, 0.1);
-        }
+      /* More distinct and slightly more opaque colors for rows */
+      tr.inception {
+        background-color: rgba(156, 39, 176, 0.2);
+      }
 
-        tr.freeze {
-            background-color: rgba(230, 126, 34, 0.1);
-        }
+      tr.planning {
+        background-color: rgba(33, 150, 243, 0.2);
+      }
 
-        tr.ratification-ready {
-            background-color: rgba(192, 57, 43, 0.1);
-        }
+      tr.development {
+        background-color: rgba(76, 175, 80, 0.2);
+      }
+
+      tr.stabilization {
+        background-color: rgba(233, 30, 99, 0.2);
+      }
+
+      tr.freezing {
+        background-color: rgba(255, 152, 0, 0.2);
+      }
+
+      tr.ratification-ready {
+        background-color: rgba(244, 67, 54, 0.2);
+      }
+
+      tr.publication {
+        background-color: rgba(63, 81, 181, 0.2);
+      }
+
+      #summary-table-container table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        font-size: 0.9em;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      #summary-table-container th,
+      #summary-table-container td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+
+      #summary-table-container th {
+        background-color: #2962ff;
+        color: white;
+      }
+
+      #summary-table-container tr.inception {
+        background-color: rgba(156, 39, 176, 0.2);
+      }
+
+      #summary-table-container tr.planning {
+        background-color: rgba(33, 150, 243, 0.2);
+      }
+
+      #summary-table-container tr.development {
+        background-color: rgba(76, 175, 80, 0.2);
+      }
+
+      #summary-table-container tr.stabilization {
+        background-color: rgba(233, 30, 99, 0.2);
+      }
+
+      #summary-table-container tr.freezing {
+        background-color: rgba(255, 152, 0, 0.2);
+      }
+
+      #summary-table-container tr.ratification-ready {
+        background-color: rgba(244, 67, 54, 0.2);
+      }
+
+      #summary-table-container tr.publication {
+        background-color: rgba(63, 81, 181, 0.2);
+      }
     </style>
-</head>
-<body>
-
-<div class="container">
-    <h1>RISC-V Spec Plan Editor</h1>
-
-    <div id="summary-bar" class="summary-bar">
-        <!-- Dynamic summary will be updated here -->
-    </div>
-    <div id="info-bar" class="info-bar">
-        <!-- This will be dynamically updated with JavaScript -->
-    </div>
-    <table id="timeline-table">
+  </head>
+  <body>
+    <div class="container">
+      <img src="static/riscv.png" alt="RISC-V Logo" style="display: block; margin: 0 auto; max-width: 40%; height: auto;" />
+      <h1>Spec Plan Editor</h1>
+      <table id="timeline-table">
         <thead>
-            <tr>
-                <th>Phase</th>
-                <th>Activity</th>
-                <th>Start Date</th>
-                <th>End Date</th>
-                <th>Duration (Days)</th>
-            </tr>
+          <tr>
+            <th>Phase</th>
+            <th>Activity</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Duration (Days)</th>
+          </tr>
         </thead>
         <tbody>
-            {% for phase, activity, start_date, end_date, duration in calculated_dates %}
-            <tr data-phase="{{ phase }}" class="{{ phase|lower|replace(' ', '-') }}" data-default-duration="{{ duration }}">
-                <td>{{ phase }}</td>
-                <td>{{ activity }}</td>
-                <td class="start-date">
-                    {% if loop.first %}
-                        <input type="date" id="inception-start-date" value="{{ current_date }}" onchange="updateDates()">
-                    {% else %}
-                        {{ start_date }}
-                    {% endif %}
-                </td>
-                <td class="end-date">{{ end_date }}</td>
-                <td>
-                    <div class="slider-container">
-                        <input type="range" class="slider" name="{{ activity.replace(' ', '_') }}_duration" value="{{ duration }}" min="0" max="200" oninput="updateSlider(this)">
-                        <span class="slider-value">{{ duration }}</span>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
+          {% for phase, activity, start_date, end_date, duration in
+          calculated_dates %}
+          <tr
+            data-phase="{{ phase }}"
+            class="{{ phase|lower|replace(' ', '-') }}"
+            data-default-duration="{{ duration }}"
+          >
+            <td>{{ phase }}</td>
+            <td>
+              {{ activity }} {% if "Approval" in activity %}
+              <i
+                class="fas fa-exclamation-triangle"
+                style="color: rgb(255, 106, 0); margin-left: 5px"
+              ></i>
+              {% endif %}
+            </td>
+            <td class="start-date">
+              {% if loop.first %}
+              <input
+                type="date"
+                id="inception-start-date"
+                value="{{ current_date }}"
+                onchange="updateDates()"
+              />
+              {% else %} {{ start_date }} {% endif %}
+            </td>
+            <td class="end-date">{{ end_date }}</td>
+            <td>
+              <div class="slider-container">
+                <input
+                  type="range"
+                  class="slider"
+                  name="{{ activity.replace(' ', '_') }}_duration"
+                  value="{{ duration }}"
+                  min="0"
+                  max="365"
+                  oninput="updateSlider(this)"
+                />
+                <span class="slider-value">{{ duration }}</span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
         </tbody>
-    </table>
-    <div class="button-container">
-        <button class="button small" onclick="resetToDefault()">Reset to Default</button>
-        <button class="button blue small" onclick="exportCSV()">Export CSV</button>
+      </table>
+      <div id="summary-bar" class="summary-bar"></div>
+      <div id="info-bar" class="info-bar"></div>
+      <div id="summary-table-container"></div>
+      <div class="button-container">
+        <button class="button small" onclick="resetToDefault()">
+          Reset to Default
+        </button>
+        <button class="button blue small" onclick="saveImage()">
+          Save Image
+        </button>
+        <button class="button blue small" onclick="exportCSV()">
+          Export Detailed Plan
+        </button>
+        <button class="button blue small" onclick="savePlanSummary()">
+          Export Plan Summary
+        </button>
+      </div>
     </div>
-</div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
         // Set the default date for Inception to the current date
-        const inceptionDateInput = document.getElementById('inception-start-date');
-        const currentDate = new Date().toISOString().split('T')[0];
+        const inceptionDateInput = document.getElementById(
+          "inception-start-date"
+        );
+        const currentDate = new Date().toISOString().split("T")[0];
         inceptionDateInput.value = currentDate;
 
         // Update dates based on the current default inception start date
         updateDates();
-    });
+      });
 
-    function getLastThursday(year, month) {
+      function getLastThursday(year, month) {
         const lastDay = new Date(year, month + 1, 0);
         const offset = (lastDay.getDay() - 4 + 7) % 7;
         lastDay.setDate(lastDay.getDate() - offset);
         return lastDay;
-    }
+      }
 
-    function updateSlider(element) {
-        const row = element.closest('tr');
-        const valueDisplay = row.querySelector('.slider-value');
+      function updateSlider(element) {
+        const row = element.closest("tr");
+        const valueDisplay = row.querySelector(".slider-value");
         valueDisplay.textContent = element.value;
 
         updateDates();
-    }
+      }
 
-    function updateDates() {
-        const inceptionStartDate = document.getElementById('inception-start-date').value;
-        const rows = document.querySelectorAll('#timeline-table tbody tr');
+      function updateDates() {
+        const inceptionStartDate = document.getElementById(
+          "inception-start-date"
+        ).value;
+        const rows = document.querySelectorAll("#timeline-table tbody tr");
         let currentStartDate = new Date(inceptionStartDate);
 
         rows.forEach((row, index) => {
-            const slider = row.querySelector('.slider');
-            const duration = parseInt(slider.value, 10);
-            const startDateElement = row.querySelector('.start-date input') || row.querySelector('.start-date');
-            const endDateElement = row.querySelector('.end-date');
+          const slider = row.querySelector(".slider");
+          const duration = parseInt(slider.value, 10);
+          const startDateElement =
+            row.querySelector(".start-date input") ||
+            row.querySelector(".start-date");
+          const endDateElement = row.querySelector(".end-date");
 
-            // Set start date for the current row
-            startDateElement.textContent = currentStartDate.toISOString().split('T')[0];
+          // Set start date for the current row
+          startDateElement.textContent = currentStartDate
+            .toISOString()
+            .split("T")[0];
 
-            // If duration is 0, set the end date to be the same as the start date
-            let endDate = new Date(currentStartDate);
-            if (duration !== 0) {
-                endDate.setDate(currentStartDate.getDate() + duration - 1);
-            } else {
-                endDate = currentStartDate;
-            }
+          // Calculate end date based on duration
+          let endDate = new Date(currentStartDate);
+          if (duration !== 0) {
+            endDate.setDate(currentStartDate.getDate() + duration - 1);
+          } else {
+            endDate = currentStartDate;
+          }
 
-            endDateElement.textContent = endDate.toISOString().split('T')[0];
+          endDateElement.textContent = endDate.toISOString().split("T")[0];
 
-            // Set the start date for the next row to the end date of the current row
-            currentStartDate = new Date(endDate);
-            if (duration !== 0) {
-                currentStartDate.setDate(currentStartDate.getDate() + 1);
-            }
+          // Set start date for the next row to the end date of the current row
+          currentStartDate = new Date(endDate);
+          if (duration !== 0) {
+            currentStartDate.setDate(currentStartDate.getDate() + 1);
+          }
         });
 
-        // Ensure BoD Approval Date is the last Thursday of the correct month
-        updateBodApprovalDate();
-
+        // Update both the summary bar and the summary table
+        updateSummaryBar();
+        updateSummaryTable();
         updateInfoBar();
-        updateSummary();
-    }
+      }
 
-    function updateBodApprovalDate() {
-        const rows = document.querySelectorAll('#timeline-table tbody tr');
-        let lastEndDate = new Date(rows[rows.length - 2].querySelector('.end-date').textContent); // Get the TSC Approval end date
+      function updateBodApprovalDate() {
+        const rows = document.querySelectorAll("#timeline-table tbody tr");
+        let lastEndDate = new Date(
+          rows[rows.length - 2].querySelector(".end-date").textContent
+        ); // Get the TSC Approval end date
 
         const bodApprovalRow = rows[rows.length - 1]; // BoD Approval row
         adjustBodApprovalDate(bodApprovalRow, lastEndDate);
-    }
+      }
 
-    function adjustBodApprovalDate(row, tscEndDate) {
-        let bodApprovalDate = getLastThursday(tscEndDate.getFullYear(), tscEndDate.getMonth());
+      function adjustBodApprovalDate(row, tscEndDate) {
+        let bodApprovalDate = getLastThursday(
+          tscEndDate.getFullYear(),
+          tscEndDate.getMonth()
+        );
 
         if (tscEndDate > bodApprovalDate) {
-            bodApprovalDate = getLastThursday(tscEndDate.getFullYear(), tscEndDate.getMonth() + 1);
+          bodApprovalDate = getLastThursday(
+            tscEndDate.getFullYear(),
+            tscEndDate.getMonth() + 1
+          );
         }
 
-        row.querySelector('.start-date').textContent = bodApprovalDate.toISOString().split('T')[0];
-        row.querySelector('.end-date').textContent = bodApprovalDate.toISOString().split('T')[0];
-    }
+        row.querySelector(".start-date").textContent = bodApprovalDate
+          .toISOString()
+          .split("T")[0];
+        row.querySelector(".end-date").textContent = bodApprovalDate
+          .toISOString()
+          .split("T")[0];
+      }
 
-    function updateInfoBar() {
-        const timelineTable = document.getElementById('timeline-table');
-        const rows = timelineTable.querySelectorAll('tbody tr');
+      function updateInfoBar() {
+        const timelineTable = document.getElementById("timeline-table");
+        const rows = timelineTable.querySelectorAll("tbody tr");
         const lastRow = rows[rows.length - 1];
-        const bodEndDateText = lastRow.querySelector('.end-date').textContent;
+        const bodEndDateText = lastRow.querySelector(".end-date").textContent;
         const bodEndDate = new Date(bodEndDateText);
 
         const quarter = Math.floor((bodEndDate.getMonth() + 3) / 3);
         const year = bodEndDate.getFullYear();
 
         const quarterText = `Q${quarter}${year}`;
-        const infoBar = document.getElementById('info-bar');
+        const infoBar = document.getElementById("info-bar");
         infoBar.textContent = `Ratification will happen in ${quarterText}, with the BoD meeting on ${bodEndDateText}.`;
-    }
+      }
 
-    function updateSummary() {
-    const phases = ['Inception', 'Plan', 'Development', 'Freeze', 'Ratification-Ready'];
-    const summaryBar = document.getElementById('summary-bar');
-    summaryBar.innerHTML = '';  // Clear existing content
+      function updateSummary() {
+        const phases = [
+          "Inception",
+          "Planning",
+          "Development",
+          "Stabilization",
+          "Freezing",
+          "Ratification-Ready",
+          "Publication",
+        ];
+        const summaryBar = document.getElementById("summary-bar");
+        summaryBar.innerHTML = ""; // Clear existing content
 
-    phases.forEach(phase => {
-        const rows = document.querySelectorAll(`#timeline-table tbody tr[data-phase="${phase}"]`);
-        if (rows.length > 0) {
-            const startDate = rows[0].querySelector('.start-date').textContent;
-            const endDate = rows[rows.length - 1].querySelector('.end-date').textContent;
+        phases.forEach((phase) => {
+          const rows = document.querySelectorAll(
+            `#timeline-table tbody tr[data-phase="${phase}"]`
+          );
+          if (rows.length > 0) {
+            const startDate = rows[0].querySelector(".start-date").textContent;
+            const endDate =
+              rows[rows.length - 1].querySelector(".end-date").textContent;
 
             const start = new Date(startDate);
             const end = new Date(endDate);
-            let duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
 
-            // If start and end dates are the same, the duration should be 0
-            if (duration < 0) {
+            // Calculate duration differently for Publication phase
+            let duration;
+            if (phase === "Publication") {
+              duration = parseInt(rows[0].querySelector(".slider").value, 10); // Get the value directly from the slider
+            } else {
+              duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+              if (duration < 0) {
                 duration = 0;
+              }
             }
 
-            const phaseClass = phase.toLowerCase().replace(/\s/g, '-');  // Convert phase name to a valid class name
+            const phaseClass = phase.toLowerCase().replace(/\s/g, "-");
 
             const summaryItem = `
                 <div class="summary-item ${phaseClass}">
                     <strong>${phase}</strong><br>
                     End Date: ${endDate}<br>
-                    Duration: ${duration} days
+                    ${duration} days
                 </div>
             `;
 
             summaryBar.innerHTML += summaryItem;
-        }
-    });
-}
-
-    function resetToDefault() {
-        const rows = document.querySelectorAll('#timeline-table tbody tr');
-        rows.forEach(row => {
-            const defaultDuration = row.getAttribute('data-default-duration');
-            const slider = row.querySelector('.slider');
-            const valueDisplay = row.querySelector('.slider-value');
-            slider.value = defaultDuration;
-            valueDisplay.textContent = defaultDuration;
+          }
         });
-        document.getElementById('inception-start-date').value = new Date().toISOString().split('T')[0];
+      }
+
+      function resetToDefault() {
+        const rows = document.querySelectorAll("#timeline-table tbody tr");
+        rows.forEach((row) => {
+          const defaultDuration = row.getAttribute("data-default-duration");
+          const slider = row.querySelector(".slider");
+          const valueDisplay = row.querySelector(".slider-value");
+          slider.value = defaultDuration;
+          valueDisplay.textContent = defaultDuration;
+        });
+        document.getElementById("inception-start-date").value = new Date()
+          .toISOString()
+          .split("T")[0];
         updateDates();
-    }
+      }
 
-    function exportCSV() {
-    const rows = document.querySelectorAll('#timeline-table tbody tr');
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "\"Phase\",\"Activity\",\"Start Date\",\"End Date\",\"Duration (Days)\"\n";
+      function exportCSV() {
+        const rows = document.querySelectorAll("#timeline-table tbody tr");
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent +=
+          '"Phase","Activity","Start Date","End Date","Duration (Days)"\n';
 
-    rows.forEach(row => {
-        const phase = row.querySelector('td:nth-child(1)').textContent.trim();
-        const activity = row.querySelector('td:nth-child(2)').textContent.trim();
-        const startDate = row.querySelector('.start-date').textContent.trim();
-        const endDate = row.querySelector('.end-date').textContent.trim();
-        const duration = row.querySelector('.slider').value.trim();
+        rows.forEach((row) => {
+          const phase = row.querySelector("td:nth-child(1)").textContent.trim();
+          const activity = row
+            .querySelector("td:nth-child(2)")
+            .textContent.trim();
+          const startDate = row.querySelector(".start-date").textContent.trim();
+          const endDate = row.querySelector(".end-date").textContent.trim();
+          const duration = row.querySelector(".slider").value.trim();
 
-        const rowData = `"${phase}","${activity}","${startDate}","${endDate}","${duration}"\n`;
-        csvContent += rowData;
-    });
+          const rowData = `"${phase}","${activity}","${startDate}","${endDate}","${duration}"\n`;
+          csvContent += rowData;
+        });
 
-    // Generate current date in YYYY-MM-DD format
-    const currentDate = new Date().toISOString().split('T')[0];
+        // Generate current date in YYYY-MM-DD format
+        const currentDate = new Date().toISOString().split("T")[0];
 
-    // Create the file name with the current date
-    const fileName = `riscv-spec-plan-${currentDate}.csv`;
+        // Create the file name with the current date
+        const fileName = `riscv-spec-plan-${currentDate}.csv`;
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", fileName);
-    document.body.appendChild(link);
-    link.click();
-}
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+      }
 
-    updateInfoBar();
-    updateSummary();
-</script>
+      function saveImage() {
+        // Hide the buttons and the header temporarily
+        const buttons = document.querySelectorAll(".button-container button");
+        const header = document.querySelector("h1");
 
-</body>
+        buttons.forEach((button) => (button.style.display = "none"));
+        header.style.display = "none";
+
+        // Clone the container to capture its contents
+        const container = document.querySelector(".container");
+        const clone = container.cloneNode(true);
+
+        // Create a temporary container for the clone
+        const tempContainer = document.createElement("div");
+        tempContainer.style.position = "absolute";
+        tempContainer.style.top = "0";
+        tempContainer.style.left = "0";
+        tempContainer.style.width = "100%";
+        tempContainer.style.backgroundColor = "white"; // Ensure background color
+        tempContainer.appendChild(clone);
+        document.body.appendChild(tempContainer);
+
+        // Use html2canvas to capture the container
+        html2canvas(tempContainer, {
+          scale: 2, // Increase scale for better resolution
+          useCORS: true, // Include this for loading external assets
+        }).then((canvas) => {
+          // Create a download link for the image
+          const link = document.createElement("a");
+          link.download = "riscv-spec-plan.png";
+          link.href = canvas.toDataURL("image/png");
+          link.click();
+
+          // Restore visibility of buttons and header
+          buttons.forEach((button) => (button.style.display = "inline-block"));
+          header.style.display = "block";
+
+          // Remove the temporary container
+          document.body.removeChild(tempContainer);
+        });
+      }
+
+      function savePlanSummary() {
+        const rows = document.querySelectorAll("#timeline-table tbody tr");
+        const milestones = [
+          {
+            phase: "Inception",
+            label: "Inception Completed by",
+            dateType: "end",
+          },
+          { phase: "Planning", label: "Plan Approved by", dateType: "end" },
+          {
+            phase: "Development",
+            label: "Specification Development Completed (v0.6) by",
+            dateType: "end",
+            activity: "Governing Committee Approval", // Ensure we target the Development phase
+            phaseFilter: "Development", // Add a filter to specify the phase
+          },
+          {
+            activity: "Internal Review (14-day minimum)",
+            label: "Internal Review Start (v0.6) by",
+            dateType: "start",
+          },
+          {
+            phase: "Stabilization",
+            label: "Specification Stabilized (v0.8) by",
+            dateType: "end",
+          },
+          {
+            phase: "Freezing",
+            label: "ARC Freeze Approval Request by",
+            dateType: "start",
+          },
+          {
+            phase: "Freezing",
+            label: "Specification Frozen (v0.9) by",
+            dateType: "end",
+          },
+          {
+            phase: "Ratification-Ready",
+            label: "Public Review Start (v0.9) by",
+            dateType: "start",
+          },
+          {
+            phase: "Ratification-Ready",
+            label: "TSC Approval (v0.99) by",
+            dateType: "end",
+          },
+          {
+            phase: "Publication",
+            label: "Specification Ratified (v1.0) by",
+            dateType: "end",
+          },
+        ];
+
+        const summaryData = milestones.map((milestone) => {
+          let relevantRow;
+          let relevantDate;
+
+          // Handle milestones linked to a specific activity
+          if (milestone.activity) {
+            relevantRow = Array.from(rows).find((row) => {
+              const activityText =
+                row.querySelector("td:nth-child(2)").textContent;
+              const phaseText = row.dataset.phase || "";
+              return (
+                activityText.includes(milestone.activity) &&
+                (!milestone.phaseFilter || phaseText === milestone.phaseFilter)
+              );
+            });
+
+            if (relevantRow) {
+              if (milestone.dateType === "start") {
+                relevantDate = relevantRow
+                  .querySelector(".start-date")
+                  .textContent.trim();
+              } else if (milestone.dateType === "end") {
+                relevantDate = relevantRow
+                  .querySelector(".end-date")
+                  .textContent.trim();
+              }
+            }
+          } else if (milestone.phase) {
+            // Handle milestones linked to a specific phase
+            const phaseRows = Array.from(rows).filter(
+              (row) =>
+                row.dataset.phase &&
+                row.dataset.phase.toLowerCase() ===
+                  milestone.phase.toLowerCase()
+            );
+
+            if (phaseRows.length > 0) {
+              if (milestone.dateType === "start") {
+                relevantDate = phaseRows[0]
+                  .querySelector(".start-date")
+                  .textContent.trim();
+              } else if (milestone.dateType === "end") {
+                relevantDate = phaseRows[phaseRows.length - 1]
+                  .querySelector(".end-date")
+                  .textContent.trim();
+              }
+            }
+          }
+
+          // If no relevant date found, mark it as N/A
+          if (!relevantDate) {
+            relevantDate = "N/A";
+          }
+
+          return `${milestone.label},${relevantDate}`;
+        });
+
+        // Prepare the CSV content
+        const csvContent =
+          "data:text/csv;charset=utf-8," + summaryData.join("\n");
+
+        // Create a download link for the CSV
+        const link = document.createElement("a");
+        const currentDate = new Date().toISOString().split("T")[0];
+        const fileName = `plan-summary-${currentDate}.csv`;
+
+        link.setAttribute("href", encodeURI(csvContent));
+        link.setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+      }
+
+      function updateSummaryBar() {
+        const phases = [
+          "Inception",
+          "Planning",
+          "Development",
+          "Stabilization",
+          "Freezing",
+          "Ratification-Ready",
+          "Publication",
+        ];
+
+        const rows = document.querySelectorAll("#timeline-table tbody tr");
+        const summaryBar = document.getElementById("summary-bar");
+        summaryBar.innerHTML = ""; // Clear existing content
+
+        phases.forEach((phase) => {
+          const phaseRows = Array.from(rows).filter(
+            (row) =>
+              row.dataset.phase &&
+              row.dataset.phase.toLowerCase() === phase.toLowerCase()
+          );
+
+          if (phaseRows.length > 0) {
+            const startDate =
+              phaseRows[0].querySelector(".start-date").textContent;
+            const endDate =
+              phaseRows[phaseRows.length - 1].querySelector(
+                ".end-date"
+              ).textContent;
+
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+
+            const duration =
+              Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+            const phaseClass = phase.toLowerCase().replace(/\s/g, "-");
+
+            const summaryItem = `
+        <div class="summary-item ${phaseClass}">
+          <strong>${phase}</strong><br>
+          End Date: ${endDate}<br>
+          ${duration} days
+        </div>
+      `;
+
+            summaryBar.innerHTML += summaryItem;
+          }
+        });
+      }
+
+      function updateSummaryTable() {
+        const milestones = [
+          {
+            label: "Inception Completed by",
+            dateType: "end",
+            phase: "Inception",
+          },
+          { label: "Plan Approved by", dateType: "end", phase: "Planning" },
+          {
+            label: "Specification Development Completed (v0.6) by",
+            dateType: "end",
+            activity: "Governing Committee Approval",
+            phase: "Development",
+          },
+          {
+            label: "Internal Review Start (v0.6) by",
+            dateType: "start",
+            activity: "Internal Review (14-day minimum)",
+            phase: "Development",
+          },
+          {
+            label: "Specification Stabilized (v0.8) by",
+            dateType: "end",
+            phase: "Stabilization",
+          },
+          {
+            label: "ARC Freeze Approval Request by",
+            dateType: "start",
+            phase: "Freezing",
+          },
+          {
+            label: "Specification Frozen (v0.9) by",
+            dateType: "end",
+            phase: "Freezing",
+          },
+          {
+            label: "Public Review Start (v0.9) by",
+            dateType: "start",
+            phase: "Ratification-Ready",
+          },
+          {
+            label: "TSC Approval (v0.99) by",
+            dateType: "end",
+            phase: "Ratification-Ready",
+          },
+          {
+            label: "Specification Ratified (v1.0) by",
+            dateType: "end",
+            phase: "Publication",
+          },
+        ];
+
+        const rows = document.querySelectorAll("#timeline-table tbody tr");
+        const summaryData = milestones.map((milestone) => {
+          let relevantRow;
+          let relevantDate;
+
+          // Handle specific activity matching
+          if (milestone.activity) {
+            relevantRow = Array.from(rows).find((row) => {
+              const activityText =
+                row.querySelector("td:nth-child(2)").textContent;
+              const phaseText = row.dataset.phase || "";
+              return (
+                activityText.includes(milestone.activity) &&
+                (!milestone.phaseFilter || phaseText === milestone.phaseFilter)
+              );
+            });
+          } else if (milestone.phase) {
+            // Handle general phase matching
+            const phaseRows = Array.from(rows).filter(
+              (row) =>
+                row.dataset.phase &&
+                row.dataset.phase.toLowerCase() ===
+                  milestone.phase.toLowerCase()
+            );
+            relevantRow =
+              milestone.dateType === "start"
+                ? phaseRows[0]
+                : phaseRows[phaseRows.length - 1];
+          }
+
+          if (relevantRow) {
+            // Set specific logic for "Specification Development Completed (v0.6)"
+            if (
+              milestone.label ===
+              "Specification Development Completed (v0.6) by"
+            ) {
+              // Find the "Governing Committee Approval" activity specifically in the Development phase
+              relevantRow = Array.from(rows).find((row) => {
+                const activityText =
+                  row.querySelector("td:nth-child(2)").textContent;
+                const phaseText = row.dataset.phase || "";
+                return (
+                  activityText.includes("Governing Committee Approval") &&
+                  phaseText.toLowerCase() === "development"
+                );
+              });
+            }
+
+            relevantDate = relevantRow
+              .querySelector(
+                milestone.dateType === "start" ? ".start-date" : ".end-date"
+              )
+              .textContent.trim();
+          } else {
+            relevantDate = "N/A";
+          }
+
+          return {
+            label: milestone.label,
+            date: relevantDate,
+            phase: milestone.phase || "N/A",
+          };
+        });
+
+        // Generate the summary table dynamically
+        const summaryTableHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Plan Summary</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${summaryData
+          .map(
+            (milestone) => `
+          <tr class="${milestone.phase.toLowerCase().replace(/\s+/g, "-")}">
+            <td>${milestone.label}</td>
+            <td>${milestone.date}</td>
+          </tr>
+        `
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+
+        // Insert the summary table into the container
+        document.getElementById("summary-table-container").innerHTML =
+          summaryTableHTML;
+      }
+
+      updateInfoBar();
+      updateSummary();
+    </script>
+  </body>
 </html>

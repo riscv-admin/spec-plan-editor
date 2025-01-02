@@ -1,28 +1,28 @@
 activities:
   Inception:
     regular:
-      - ["Requires New Group (Regular)", 30]
+      - ["New Technical Committee", 45]
     fast-track:
-      - ["Requires ARC Approval (Fast-Track)", 30]
-  Plan:
+      - ["ARC Approval (Fast-Track)", 30]
+  Planning:
     - ["Plan Tasks", 45]
-    - ["Chairs Approval", 1]
+    - ["Governing Committee Approval", 14]
   Development:
     - ["Development Tasks", 60]
-    - ["Governing Committee Stabilization Approval", 7]
-    - ["Internal Review", 14]
-  Freeze:
-    - ["ARC Freeze Approval", 30]
-    - ["Freeze Tasks", 15]
-    - ["RISC-V Compliance", 7]
-    - ["Committee Chairs Signoffs", 14]
-    - ["RISC-V VP Signoff", 1]
+    - ["Project Committee Approval", 14]
+    - ["Governing Committee Approval", 14]
+  Stabilization:
+    - ["Stabilization Tasks", 30]
+    - ["Project Committee Approval", 14]
+  Freezing:
+    - ["ARC Review and Approval", 45]
+    - ["Freeze Tasks", 30]
+    - ["Governing Committee Approval", 14]
   Ratification-Ready:
-    - ["Public Review", 30]
-    - ["Ratification-Ready Tasks", 15]
-    - ["ARC Ratification Approval (if substantial changes after public review)", 30]
     - ["RISC-V Compliance", 1]
-    - ["Committee Chairs Signoffs", 7]
-    - ["RISC-V VP Signoff", 7]
+    - ["Public Review", 30]
+    - ["Ratification-Ready Tasks", 30]
+    - ["ARC Ratification Approval (if substantial changes after public review)", 0]
     - ["TSC Approval", 14]
+  Publication:
     - ["BoD Approval", 1]

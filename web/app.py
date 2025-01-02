@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-import yaml
+import yaml, calendar
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -11,9 +11,13 @@ with open('activities.yaml', 'r') as file:
 
 def get_last_thursday(year, month):
     """Return the last Thursday of a given month."""
-    last_day = datetime(year, month + 1, 1) - timedelta(days=1)
-    offset = (last_day.weekday() - 3) % 7  # Thursday is 3 in Python's weekday()
-    last_thursday = last_day - timedelta(days=offset)
+    # Get the last day of the month
+    last_day = calendar.monthrange(year, month)[1]
+    last_day_date = datetime(year, month, last_day)
+
+    # Calculate the offset to the last Thursday
+    offset = (last_day_date.weekday() - calendar.THURSDAY) % 7
+    last_thursday = last_day_date - timedelta(days=offset)
     return last_thursday
 
 @app.route('/', methods=['GET', 'POST'])

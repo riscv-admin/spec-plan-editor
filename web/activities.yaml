@@ -1,25 +1,26 @@
 activities:
   Inception:
-    - ["Inception New Group (Regular) or ARC Approval (Fast-Track)", 30]
-  Plan:
+    - ["New Project Committee or Fast-Track Proposal", 30]
+  Planning:
     - ["Plan Tasks", 30]
-    - ["Chairs Approval", 1]
+    - ["Governing Committee Approval", 14]
   Development:
-    - ["Development Tasks", 45]
-    - ["Governing Committee Stabilization Approval", 7]
+    - ["Development Tasks", 60]
+    - ["Project Committee Approval", 14]
+    - ["Governing Committee Approval", 14]
     - ["Internal Review (14-day minimum)", 14]
-  Freeze:
+  Stabilization:
+    - ["Stabilization Tasks", 30]
+    - ["Project Committee Approval", 14]
+  Freezing:
     - ["ARC Freeze Approval", 30]
+    - ["RISC-V Compliance", 7]
     - ["Freeze Tasks", 15]
-    - ["RISC-V Compliance (1-7 days)", 7]
-    - ["Committee Chairs Signoffs (14-day minimum)", 14]
-    - ["RISC-V VP Signoff (1-7 days)", 7]
+    - ["Governing Committee Approval", 14]
   Ratification-Ready:
-    - ["Ratification-Ready Tasks", 15]
     - ["Public Review (30-day minimum)", 30]
+    - ["Ratification-Ready Tasks", 15]
     - ["ARC Ratification Approval (if substantial changes after public review)", 0]
-    - ["RISC-V Compliance (1-7 days)", 7]
-    - ["Committee Chairs Signoffs (7-day minimum)", 7]
-    - ["RISC-V VP Signoff (1-7 days)", 7]
     - ["TSC Approval (14-day minimum)", 14]
-    - ["BoD Approval (once a month only)", 1]
+  Publication:
+    - ["BoD Approval", 1]
