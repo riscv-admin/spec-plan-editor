@@ -6,10 +6,10 @@ activities:
     - ["Governing Committee Approval", 14]
   Development:
     - ["Development Tasks", 60]
-    - ["Project Committee Approval", 14]
+    - ["Project Committee Approval (not required for Fast-Track)", 14]
     - ["Governing Committee Approval", 14]
-    - ["Internal Review (14-day minimum)", 14]
   Stabilization:
+    - ["Internal Review (14-day minimum)", 14]
     - ["Stabilization Tasks", 30]
     - ["Project Committee Approval", 14]
   Freezing:

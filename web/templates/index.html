@@ -239,7 +239,11 @@
   </head>
   <body>
     <div class="container">
-      <img src="static/riscv.png" alt="RISC-V Logo" style="display: block; margin: 0 auto; max-width: 40%; height: auto;" />
+      <img
+        src="static/riscv.png"
+        alt="RISC-V Logo"
+        style="display: block; margin: 0 auto; max-width: 40%; height: auto"
+      />
       <h1>Spec Plan Editor</h1>
       <table id="timeline-table">
         <thead>
@@ -289,6 +293,9 @@
                   min="0"
                   max="365"
                   oninput="updateSlider(this)"
+                  {% if activity == 'BoD Approval' %}
+                  disabled="disabled"
+               {% endif %}
                 />
                 <span class="slider-value">{{ duration }}</span>
               </div>
@@ -352,6 +359,9 @@
         let currentStartDate = new Date(inceptionStartDate);
 
         rows.forEach((row, index) => {
+          const activityName = row
+            .querySelector("td:nth-child(2)")
+            .textContent.trim();
           const slider = row.querySelector(".slider");
           const duration = parseInt(slider.value, 10);
           const startDateElement =
@@ -359,29 +369,59 @@
             row.querySelector(".start-date");
           const endDateElement = row.querySelector(".end-date");
 
-          // Set start date for the current row
+          // Normal logic: set start date
           startDateElement.textContent = currentStartDate
             .toISOString()
             .split("T")[0];
 
-          // Calculate end date based on duration
+          // Default "endDate" is startDate + (duration - 1) days
           let endDate = new Date(currentStartDate);
           if (duration !== 0) {
-            endDate.setDate(currentStartDate.getDate() + duration - 1);
-          } else {
-            endDate = currentStartDate;
+            endDate.setDate(endDate.getDate() + duration - 1);
           }
 
+          // Special rule for BoD Approval
+          if (activityName === "BoD Approval") {
+            // 1) Find the end date of the previous row (the “latest approval”)
+            const prevRow = rows[index - 1];
+            const prevEndDateStr =
+              prevRow.querySelector(".end-date").textContent;
+            const prevEndDate = new Date(prevEndDateStr);
+
+            // 2) Must be at least 10 days later:
+            const minDate = new Date(prevEndDate);
+            minDate.setDate(minDate.getDate() + 10);
+
+            // 3) Find the last Thursday of minDate’s month:
+            let lastThu = getLastThursday(
+              minDate.getFullYear(),
+              minDate.getMonth()
+            );
+
+            // If that last Thursday is still before minDate, jump to the next month
+            if (lastThu < minDate) {
+              let nextMonth = minDate.getMonth() + 1;
+              let nextYear = minDate.getFullYear();
+              if (nextMonth > 11) {
+                nextMonth = 0;
+                nextYear += 1;
+              }
+              lastThu = getLastThursday(nextYear, nextMonth);
+            }
+
+            // Use that last Thursday as the official BoD Approval endDate
+            endDate = lastThu;
+          }
+
+          // Write the final endDate to the table cell
           endDateElement.textContent = endDate.toISOString().split("T")[0];
 
-          // Set start date for the next row to the end date of the current row
+          // Next row starts the day after this one ends
           currentStartDate = new Date(endDate);
-          if (duration !== 0) {
-            currentStartDate.setDate(currentStartDate.getDate() + 1);
-          }
+          currentStartDate.setDate(currentStartDate.getDate() + 1);
         });
 
-        // Update both the summary bar and the summary table
+        // Update the summary bars & info
         updateSummaryBar();
         updateSummaryTable();
         updateInfoBar();
