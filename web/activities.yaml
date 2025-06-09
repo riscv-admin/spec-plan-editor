@@ -3,6 +3,7 @@ activities:
     - ["New Project Committee or Fast-Track Proposal", 30]
   Planning:
     - ["Plan Tasks", 30]
+    - ["Governing Committee Review", 14]
     - ["Governing Committee Approval", 14]
   Development:
     - ["Development Tasks", 60]
