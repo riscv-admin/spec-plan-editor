@@ -245,6 +245,19 @@
         style="display: block; margin: 0 auto; max-width: 40%; height: auto"
       />
       <h1>Spec Plan Editor</h1>
+      <div style="display:flex; justify-content:flex-end; align-items:center; gap:8px; margin: 10px 0 14px;">
+        <label for="handoff-mode" style="font-weight:600;">Task Dependency:</label>
+        <select id="handoff-mode" onchange="updateDates()" style="padding:6px 8px;">
+          <option value="end_to_start" selected>End-to-Start (Next Day)</option>
+          <option value="start_when_end">End-to-Start (Same Day)</option>
+        </select>
+        <label for="estimate-mode" style="font-weight:600; margin-left:16px;">Three-Point Estimates:</label>
+        <select id="estimate-mode" onchange="updateDates()" style="padding:6px 8px;">
+          <option value="most_likely" selected>Most Likely (M)</option>
+          <option value="optimistic">Optimistic (O)</option>
+          <option value="pessimistic">Pessimistic (P)</option>
+        </select>
+      </div>
       <table id="timeline-table">
         <thead>
           <tr>
@@ -336,6 +349,25 @@
         updateDates();
       });
 
+      function readDateFromCell(cell) {
+        const input = cell?.querySelector("input");
+        return (input ? input.value : (cell?.textContent || "")).trim();
+      }
+
+      function getHandoffGapDays() {
+        const mode = document.getElementById("handoff-mode")?.value || "end_to_start";
+        // end_to_start => gap of 1 day; start_when_end => gap of 0 days
+        return mode === "end_to_start" ? 1 : 0;
+      }
+
+      function getEstimateMode() {
+        return document.getElementById("estimate-mode")?.value || "most_likely";
+      }
+
+      function isApprovalActivity(name) {
+        return /approval/i.test(name); // catches ARC Freeze Approval, Governing Committee Approval, TSC/BoD Approval, etc.
+      }
+
       function getLastThursday(year, month) {
         const lastDay = new Date(year, month + 1, 0);
         const offset = (lastDay.getDay() - 4 + 7) % 7;
@@ -351,77 +383,150 @@
         updateDates();
       }
 
+      /**
+       * Compute effective duration based on estimate mode.
+       * - Only applies to tasks that do NOT contain "Approval"
+       * - Zero-duration remains 0 (milestone)
+       * - Never reduce positive durations below 1 day
+       */
+      function effectiveDurationFor(activityName, baseDuration) {
+        if (baseDuration === 0) return 0; // milestone stays a no-op
+        if (isApprovalActivity(activityName)) return baseDuration; // approvals unchanged
+
+        const mode = getEstimateMode();
+        if (mode === "optimistic") {
+          // -10% rounded down, but minimum 1 if base > 0
+          return Math.max(1, Math.floor(baseDuration * 0.9));
+        } else if (mode === "pessimistic") {
+          // +20% rounded up
+          return Math.ceil(baseDuration * 1.2);
+        }
+        // Most Likely (default)
+        return baseDuration;
+      }
+
       function updateDates() {
-        const inceptionStartDate = document.getElementById(
-          "inception-start-date"
-        ).value;
+        // --- helpers (scoped) ---
+        function getHandoffGapDays() {
+          const mode = document.getElementById("handoff-mode")?.value || "end_to_start";
+          return mode === "end_to_start" ? 1 : 0; // Next day vs same day
+        }
+        function getEstimateMode() {
+          return document.getElementById("estimate-mode")?.value || "most_likely";
+        }
+        function isApprovalActivity(name) {
+          return /approval/i.test(name); // Any "*Approval"
+        }
+        // Only match the actual "Public Review ..." row, not mere mentions
+        function isPublicReviewActivity(name) {
+          const s = String(name).toLowerCase().trim().replace(/\s+/g, " ");
+          return s.startsWith("public review");
+        }
+        function isGoverningCommitteeReview(name) {
+          return /governing[\s-]*committee[\s-]*review/i.test(String(name).toLowerCase());
+        }
+        function isInternalReview(name) {
+          return /internal[\s-]*review/i.test(String(name).toLowerCase());
+        }
+
+        /**
+         * Effective duration policy:
+         * - Public Review: use slider value (user-controlled), not affected by O/M/P; enforce min 30.
+         * - Approvals, Governing Committee Review, Internal Review: unchanged (no O/M/P scaling).
+         * - Other tasks: O/M/P ±30% (min 1 day if base > 0).
+         * - Zero-duration stays 0 (milestone).
+         */
+        function effectiveDurationFor(activityName, baseDuration, sliderEl) {
+          if (isPublicReviewActivity(activityName)) {
+            // Ensure the control has a 30-day floor, but do not force to 30 if user chose >30
+            if (sliderEl) {
+              if (sliderEl.min !== "30") sliderEl.min = "30";
+              if (baseDuration < 30) {
+                baseDuration = 30;
+                sliderEl.value = "30";
+              }
+            } else {
+              baseDuration = Math.max(30, baseDuration);
+            }
+            return baseDuration; // No O/M/P scaling
+          }
+
+          if (baseDuration === 0) return 0; // milestone
+          if (isApprovalActivity(activityName) ||
+              isGoverningCommitteeReview(activityName) ||
+              isInternalReview(activityName)) {
+            return baseDuration; // protected from O/M/P scaling
+          }
+
+          const mode = getEstimateMode();
+          if (mode === "optimistic")  return Math.max(1, Math.floor(baseDuration * 0.7)); // -30%
+          if (mode === "pessimistic") return Math.ceil(baseDuration * 1.3);               // +30%
+          return baseDuration; // most_likely
+        }
+
+        // --- main calc ---
+        const inceptionStartDate = document.getElementById("inception-start-date").value;
         const rows = document.querySelectorAll("#timeline-table tbody tr");
         let currentStartDate = new Date(inceptionStartDate);
 
         rows.forEach((row, index) => {
-          const activityName = row
-            .querySelector("td:nth-child(2)")
-            .textContent.trim();
+          const activityName = row.querySelector("td:nth-child(2)").textContent.trim();
           const slider = row.querySelector(".slider");
-          const duration = parseInt(slider.value, 10);
-          const startDateElement =
-            row.querySelector(".start-date input") ||
-            row.querySelector(".start-date");
-          const endDateElement = row.querySelector(".end-date");
+          const baseDuration = parseInt(slider?.value, 10) || 0;
 
-          // Normal logic: set start date
-          startDateElement.textContent = currentStartDate
-            .toISOString()
-            .split("T")[0];
+          // Compute effective duration per policy
+          const duration = effectiveDurationFor(activityName, baseDuration, slider);
 
-          // Default "endDate" is startDate + (duration - 1) days
+          // Reflect effective duration in the visible "Duration (Days)" cell
+          const valueDisplay = row.querySelector(".slider-value");
+          if (valueDisplay) valueDisplay.textContent = String(duration);
+
+          const startDateCell = row.querySelector(".start-date");
+          const startInput    = startDateCell?.querySelector("input");
+          const endDateEl     = row.querySelector(".end-date");
+
+          // Start date (cursor position)
+          const startStr = currentStartDate.toISOString().split("T")[0];
+          if (startInput) startInput.value = startStr; else startDateCell.textContent = startStr;
+
+          // Default end date from effective duration
           let endDate = new Date(currentStartDate);
           if (duration !== 0) {
             endDate.setDate(endDate.getDate() + duration - 1);
           }
 
-          // Special rule for BoD Approval
+          // BoD special handling (≥10 days after previous end, then last Thursday)
           if (activityName === "BoD Approval") {
-            // 1) Find the end date of the previous row (the “latest approval”)
             const prevRow = rows[index - 1];
-            const prevEndDateStr =
-              prevRow.querySelector(".end-date").textContent;
+            const prevEndDateStr = prevRow.querySelector(".end-date").textContent;
             const prevEndDate = new Date(prevEndDateStr);
 
-            // 2) Must be at least 10 days later:
             const minDate = new Date(prevEndDate);
             minDate.setDate(minDate.getDate() + 10);
 
-            // 3) Find the last Thursday of minDate’s month:
-            let lastThu = getLastThursday(
-              minDate.getFullYear(),
-              minDate.getMonth()
-            );
-
-            // If that last Thursday is still before minDate, jump to the next month
+            let lastThu = getLastThursday(minDate.getFullYear(), minDate.getMonth());
             if (lastThu < minDate) {
               let nextMonth = minDate.getMonth() + 1;
               let nextYear = minDate.getFullYear();
-              if (nextMonth > 11) {
-                nextMonth = 0;
-                nextYear += 1;
-              }
+              if (nextMonth > 11) { nextMonth = 0; nextYear += 1; }
               lastThu = getLastThursday(nextYear, nextMonth);
             }
-
-            // Use that last Thursday as the official BoD Approval endDate
             endDate = lastThu;
           }
 
-          // Write the final endDate to the table cell
-          endDateElement.textContent = endDate.toISOString().split("T")[0];
+          // Commit end date
+          endDateEl.textContent = endDate.toISOString().split("T")[0];
 
-          // Next row starts the day after this one ends
-          currentStartDate = new Date(endDate);
-          currentStartDate.setDate(currentStartDate.getDate() + 1);
+          // Advance cursor:
+          const gapDays = getHandoffGapDays();
+          if (activityName === "BoD Approval" || duration > 0) {
+            currentStartDate = new Date(endDate);
+            currentStartDate.setDate(currentStartDate.getDate() + gapDays);
+          }
+          // else: zero-duration milestone -> no shift
         });
 
-        // Update the summary bars & info
+        // Refresh summaries/info
         updateSummaryBar();
         updateSummaryTable();
         updateInfoBar();
@@ -550,7 +655,7 @@
           const activity = row
             .querySelector("td:nth-child(2)")
             .textContent.trim();
-          const startDate = row.querySelector(".start-date").textContent.trim();
+          readDateFromCell(row.querySelector(".start-date"))
           const endDate = row.querySelector(".end-date").textContent.trim();
           const duration = row.querySelector(".slider").value.trim();
 
@@ -741,52 +846,43 @@
 
       function updateSummaryBar() {
         const phases = [
-          "Inception",
-          "Planning",
-          "Development",
-          "Stabilization",
-          "Freezing",
-          "Ratification-Ready",
-          "Publication",
+          "Inception","Planning","Development","Stabilization",
+          "Freezing","Ratification-Ready","Publication",
         ];
 
         const rows = document.querySelectorAll("#timeline-table tbody tr");
         const summaryBar = document.getElementById("summary-bar");
-        summaryBar.innerHTML = ""; // Clear existing content
+        summaryBar.innerHTML = "";
 
         phases.forEach((phase) => {
           const phaseRows = Array.from(rows).filter(
-            (row) =>
-              row.dataset.phase &&
-              row.dataset.phase.toLowerCase() === phase.toLowerCase()
+            (row) => row.dataset.phase &&
+                    row.dataset.phase.toLowerCase() === phase.toLowerCase()
           );
+          if (!phaseRows.length) return;
 
-          if (phaseRows.length > 0) {
-            const startDate =
-              phaseRows[0].querySelector(".start-date").textContent;
-            const endDate =
-              phaseRows[phaseRows.length - 1].querySelector(
-                ".end-date"
-              ).textContent;
+          const startStr = readDateFromCell(phaseRows[0].querySelector(".start-date"));
+          const endStr   = phaseRows[phaseRows.length - 1].querySelector(".end-date").textContent.trim();
 
-            const start = new Date(startDate);
-            const end = new Date(endDate);
+          const start = new Date(startStr);
+          const end   = new Date(endStr);
 
-            const duration =
-              Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-
-            const phaseClass = phase.toLowerCase().replace(/\s/g, "-");
-
-            const summaryItem = `
-        <div class="summary-item ${phaseClass}">
-          <strong>${phase}</strong><br>
-          End Date: ${endDate}<br>
-          ${duration} days
-        </div>
-      `;
-
-            summaryBar.innerHTML += summaryItem;
+          // Guard against invalid dates
+          let durationText = "—";
+          if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+            const msPerDay = 24 * 60 * 60 * 1000;
+            const duration = Math.max(1, Math.round((end - start) / msPerDay) + 1);
+            durationText = `${duration} days`;
           }
+
+          const phaseClass = phase.toLowerCase().replace(/\s/g, "-");
+          summaryBar.innerHTML += `
+            <div class="summary-item ${phaseClass}">
+              <strong>${phase}</strong><br>
+              End Date: ${endStr}<br>
+              ${durationText}
+            </div>
+          `;
         });
       }
 

@@ -3,21 +3,21 @@ activities:
     - ["New Project Committee or Fast-Track Proposal", 30]
   Planning:
     - ["Plan Tasks", 30]
-    - ["Governing Committee Review", 14]
-    - ["Governing Committee Approval", 14]
+    - ["Governing Committee Review (14-day minimum)", 14]
+    - ["Governing Committee Approval (14-day minimum)", 14]
   Development:
     - ["Development Tasks", 60]
     - ["Project Committee Approval (not required for Fast-Track)", 14]
-    - ["Governing Committee Approval", 14]
+    - ["Governing Committee Approval (14-day minimum)", 14]
   Stabilization:
     - ["Internal Review (14-day minimum)", 14]
     - ["Stabilization Tasks", 30]
-    - ["Project Committee Approval", 14]
+    - ["Project Committee Approval (not required for Fast-Track)", 14]
   Freezing:
-    - ["ARC Freeze Approval", 30]
+    - ["ARC Freeze Approval", 45]
     - ["RISC-V Compliance", 7]
     - ["Freeze Tasks", 15]
-    - ["Governing Committee Approval", 14]
+    - ["Governing Committee Approval (14-day minimum)", 14]
   Ratification-Ready:
     - ["Public Review (30-day minimum)", 30]
     - ["Ratification-Ready Tasks", 15]
