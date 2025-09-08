@@ -235,6 +235,23 @@
       #summary-table-container tr.publication {
         background-color: rgba(63, 81, 181, 0.2);
       }
+
+      /* Centers the bar, keeps its contents right-justified, responsive */
+      .controls-outer{
+        display:flex;
+        justify-content:center;   /* center the whole bar under the title */
+      }
+
+      .controls-toolbar{
+        display:flex;
+        align-items:center;
+        gap:12px;
+        justify-content:flex-end; /* keep controls “to the right” inside the bar */
+        width:min(100%, 960px);   /* nice readable max width */
+        margin:10px 0 14px;
+        flex-wrap:wrap;           /* wrap gracefully on small screens */
+      }
+
     </style>
   </head>
   <body>
@@ -245,18 +262,33 @@
         style="display: block; margin: 0 auto; max-width: 40%; height: auto"
       />
       <h1>Spec Plan Editor</h1>
-      <div style="display:flex; justify-content:flex-end; align-items:center; gap:8px; margin: 10px 0 14px;">
-        <label for="handoff-mode" style="font-weight:600;">Task Dependency:</label>
-        <select id="handoff-mode" onchange="updateDates()" style="padding:6px 8px;">
-          <option value="end_to_start" selected>End-to-Start (Next Day)</option>
-          <option value="start_when_end">End-to-Start (Same Day)</option>
-        </select>
-        <label for="estimate-mode" style="font-weight:600; margin-left:16px;">Three-Point Estimates:</label>
-        <select id="estimate-mode" onchange="updateDates()" style="padding:6px 8px;">
-          <option value="most_likely" selected>Most Likely (M)</option>
-          <option value="optimistic">Optimistic (O)</option>
-          <option value="pessimistic">Pessimistic (P)</option>
-        </select>
+      <!-- Wrap the existing controls -->
+      <div class="controls-outer">
+        <div class="controls-toolbar">
+          <label for="start-from" style="font-weight:600;">Start From:</label>
+          <select id="start-from" onchange="applyStartFrom(); updateDates();" style="padding:6px 8px;">
+            <option value="Inception" selected>Inception</option>
+            <option value="Planning">Planning</option>
+            <option value="Development">Development</option>
+            <option value="Stabilization">Stabilization</option>
+            <option value="Freezing">Freezing</option>
+            <option value="Ratification-Ready">Ratification-Ready</option>
+            <option value="Publication">Publication</option>
+          </select>
+
+          <label for="handoff-mode" style="font-weight:600; margin-left:16px;">Task Dependency:</label>
+          <select id="handoff-mode" onchange="updateDates()" style="padding:6px 8px;">
+            <option value="end_to_start" selected>End-to-Start (Next Day)</option>
+            <option value="start_when_end">End-to-Start (Same Day)</option>
+          </select>
+
+          <label for="estimate-mode" style="font-weight:600; margin-left:16px;">Three-Point Estimates:</label>
+          <select id="estimate-mode" onchange="updateDates()" style="padding:6px 8px;">
+            <option value="most_likely" selected>Most Likely (M)</option>
+            <option value="optimistic">Optimistic (O)</option>
+            <option value="pessimistic">Pessimistic (P)</option>
+          </select>
+        </div>
       </div>
       <table id="timeline-table">
         <thead>
@@ -344,10 +376,63 @@
         );
         const currentDate = new Date().toISOString().split("T")[0];
         inceptionDateInput.value = currentDate;
-
+        // Enforce Start-From default behavior (Inception)
+        applyStartFrom();
         // Update dates based on the current default inception start date
         updateDates();
       });
+
+      // Canonical phase ordering
+      const PHASE_ORDER = [
+        "Inception",
+        "Planning",
+        "Development",
+        "Stabilization",
+        "Freezing",
+        "Ratification-Ready",
+        "Publication",
+      ];
+
+      function phaseIndex(phaseName) {
+        return PHASE_ORDER.indexOf(String(phaseName || "").trim());
+      }
+
+      /**
+       * Start-From policy:
+       *  - Restore ALL tasks to their default durations first (data-default-duration)
+       *  - Then, for phases that come BEFORE the selected phase, force duration to 0
+       *  - Finally, refresh the visible slider value labels
+       * This guarantees idempotent, predictable behavior whenever the selection changes.
+       */
+      function applyStartFrom() {
+        const selected = document.getElementById("start-from")?.value || "Inception";
+        const cutoffIdx = phaseIndex(selected);
+        const rows = document.querySelectorAll("#timeline-table tbody tr");
+
+        // 1) Restore defaults everywhere
+        rows.forEach((row) => {
+          const slider = row.querySelector(".slider");
+          const defaultDuration = row.getAttribute("data-default-duration");
+          if (slider && defaultDuration !== null) {
+            slider.value = defaultDuration;
+            const label = row.querySelector(".slider-value");
+            if (label) label.textContent = defaultDuration;
+          }
+        });
+
+        // 2) Zero-out tasks prior to the selected phase
+        rows.forEach((row) => {
+          const rowPhase = row.getAttribute("data-phase") || "";
+          if (phaseIndex(rowPhase) < cutoffIdx) {
+            const slider = row.querySelector(".slider");
+            if (slider) {
+              slider.value = "0";
+              const label = row.querySelector(".slider-value");
+              if (label) label.textContent = "0";
+            }
+          }
+        });
+      }
 
       function readDateFromCell(cell) {
         const input = cell?.querySelector("input");
@@ -440,11 +525,11 @@
           if (isPublicReviewActivity(activityName)) {
             // Ensure the control has a 30-day floor, but do not force to 30 if user chose >30
             if (sliderEl) {
-              if (sliderEl.min !== "30") sliderEl.min = "30";
-              if (baseDuration < 30) {
-                baseDuration = 30;
-                sliderEl.value = "30";
-              }
+              if (sliderEl.min !== "30") sliderEl.min = "0";
+              // if (baseDuration < 30) {
+              //   baseDuration = 30;
+              //   sliderEl.value = "0";
+              // }
             } else {
               baseDuration = Math.max(30, baseDuration);
             }
@@ -635,12 +720,21 @@
           const defaultDuration = row.getAttribute("data-default-duration");
           const slider = row.querySelector(".slider");
           const valueDisplay = row.querySelector(".slider-value");
-          slider.value = defaultDuration;
-          valueDisplay.textContent = defaultDuration;
+          if (slider && defaultDuration !== null) {
+            slider.value = defaultDuration;
+            if (valueDisplay) valueDisplay.textContent = defaultDuration;
+          }
         });
-        document.getElementById("inception-start-date").value = new Date()
-          .toISOString()
-          .split("T")[0];
+
+        // Reset Start Date
+        document.getElementById("inception-start-date").value =
+          new Date().toISOString().split("T")[0];
+
+        // Reset Start-From to Inception and re-apply policy
+        const startFrom = document.getElementById("start-from");
+        if (startFrom) startFrom.value = "Inception";
+        applyStartFrom();
+
         updateDates();
       }
 
