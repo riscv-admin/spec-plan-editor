@@ -1,288 +1,672 @@
-import sys
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Specification Plan Editor - Timeline Calculation Tool
+
+This module calculates project timelines based on activities defined in a YAML file.
+It supports different estimation modes (optimistic, most likely, pessimistic) and
+can generate schedules starting from different project phases.
+"""
+
+import argparse
+import csv
+import calendar
+import math
+import re
 from datetime import datetime, timedelta
-from tabulate import tabulate
+
 import yaml
+from tabulate import tabulate
 
-# Load the YAML file
+# Path to the YAML file containing activity definitions
+ACTIVITIES_FILE = "web/activities.yaml"
+
+# Ordered list of project phases - defines the sequence of the specification lifecycle
+PHASE_ORDER = [
+    "Inception",
+    "Planning",
+    "Development",
+    "Stabilization",
+    "Freezing",
+    "Ratification-Ready",
+    "Publication",
+]
+
+
 def load_activities_from_yaml(file_path):
-    with open(file_path, 'r') as file:
+    """
+    Load activities from a YAML configuration file.
+
+    Args:
+        file_path: Path to the YAML file containing activity definitions
+
+    Returns:
+        Dictionary of activities organized by phase
+    """
+    with open(file_path, "r") as file:
         data = yaml.safe_load(file)
-    return data['activities']
+    return data["activities"]
 
-# Define the path to the YAML file
-yaml_file_path = 'activities.yaml'
 
-# Load the activities from the YAML file
-activities = load_activities_from_yaml(yaml_file_path)
+def normalize_phase(name):
+    """
+    Normalize phase names by converting to lowercase and replacing separators with spaces.
 
-def calculate_last_thursday(year, month):
-    """Calculate the last Thursday of a given month and year."""
-    last_day = datetime(year, month + 1, 1) - timedelta(days=1) if month < 12 else datetime(year, 12, 31)
-    offset = (last_day.weekday() - 3) % 7
-    return last_day - timedelta(days=offset)
+    Args:
+        name: Phase name to normalize
 
-def calculate_quarter(date):
-    """Calculate the quarter for a given date."""
-    month = date.month
-    year = date.year % 100  # Get last two digits of the year
-    quarter = (month - 1) // 3 + 1
-    return f"Q{quarter}{year:02d}"
+    Returns:
+        Normalized phase name (lowercase, spaces instead of underscores/hyphens)
+    """
+    return re.sub(r"[\s_-]+", " ", str(name).strip().lower())
 
-def get_last_day_of_quarter(year, quarter):
-    """Get the last day of the specified quarter."""
-    if quarter == 1:
-        return datetime(year, 3, 31)
-    elif quarter == 2:
-        return datetime(year, 6, 30)
-    elif quarter == 3:
-        return datetime(year, 9, 30)
-    elif quarter == 4:
-        return datetime(year, 12, 31)
-    else:
-        raise ValueError("Invalid quarter. Choose from Q1, Q2, Q3, or Q4.")
 
-def get_ratification_position_in_quarter(bod_approval_end_date, quarter_start, quarter_end):
-    """Determine where the BoD Approval date falls within the quarter."""
-    quarter_duration = (quarter_end - quarter_start).days
-    days_into_quarter = (bod_approval_end_date - quarter_start).days
+# Create a lookup dictionary for phase validation (normalized name -> canonical name)
+PHASE_LOOKUP = {normalize_phase(phase): phase for phase in PHASE_ORDER}
 
-    if days_into_quarter < quarter_duration * 0.25:
-        return "beginning of"
-    elif days_into_quarter < quarter_duration * 0.5:
-        return "first half of"
-    elif days_into_quarter < quarter_duration * 0.75:
-        return "middle of"
-    else:
-        return "end of"
 
-def calculate_dates_reverse(ratification_quarter, path):
-    """Calculate dates in reverse given a target ratification quarter."""
-    year = int("20" + ratification_quarter[2:4])
-    quarter = int(ratification_quarter[1])
+def parse_phase(value):
+    """
+    Parse and validate a phase name, returning the canonical phase name.
 
-    if quarter == 1:
-        quarter_start = datetime(year, 1, 1)  # Start of the year for Q1
-    else:
-        quarter_start = get_last_day_of_quarter(year, quarter - 1) + timedelta(days=1)
+    Args:
+        value: Phase name to parse and validate
 
-    quarter_end = get_last_day_of_quarter(year, quarter)
-    last_thursday = calculate_last_thursday(quarter_end.year, quarter_end.month)
+    Returns:
+        Canonical phase name from PHASE_ORDER
 
-    current_date = last_thursday
-    calculated_dates = []
-    summary = {}
-    total_days = 0
+    Raises:
+        ValueError: If the phase name is not valid
+    """
+    key = normalize_phase(value)
+    if key not in PHASE_LOOKUP:
+        raise ValueError(
+            f"Invalid phase '{value}'. Choose one of: {', '.join(PHASE_ORDER)}"
+        )
+    return PHASE_LOOKUP[key]
 
-    # Store phases in a list to reverse the order after processing
-    summary_list = []
 
-    for phase in ["Ratification-Ready", "Freeze", "Development", "Plan"]:
-        phase_activities = activities[phase] if phase != "Inception" else activities["Inception"][path]
-        phase_tasks = []
-        phase_duration = 0
+def is_public_review_activity(name):
+    """
+    Check if an activity name indicates a public review period.
 
-        for task_name, duration in reversed(phase_activities):
-            if duration == 0:
-                continue  # Skip tasks with a duration of 0 days
+    Args:
+        name: Activity name to check
 
-            if task_name == "BoD Approval":
-                start_date = end_date = last_thursday
-            else:
-                end_date = current_date
-                start_date = end_date - timedelta(days=duration - 1)
-                current_date = start_date - timedelta(days=1)  # Set current date to the day before the start date for the next task in reverse
-                phase_duration += duration
+    Returns:
+        True if the activity is a public review activity
+    """
+    normalized = re.sub(r"\s+", " ", str(name).strip().lower())
+    return normalized.startswith("public review")
 
-            phase_tasks.insert(0, (phase, task_name, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), duration))
 
-        calculated_dates.extend(phase_tasks)
-        summary_list.insert(0, (phase, phase_tasks[0][2], phase_tasks[-1][3], phase_duration))  # Collect summary data in forward order
-        total_days += phase_duration
+def is_approval_activity(name):
+    """
+    Check if an activity name indicates an approval activity.
 
-    summary["total_days"] = total_days
-    summary["ratification_quarter"] = ratification_quarter
-    summary["phases"] = summary_list
+    Args:
+        name: Activity name to check
 
-    # Calculate where the BoD Approval falls within the quarter
-    bod_approval_end_date = last_thursday
-    ratification_position = get_ratification_position_in_quarter(bod_approval_end_date, quarter_start, quarter_end)
-    summary["ratification_position"] = f"Ratification will happen in the {ratification_position} {ratification_quarter}."
+    Returns:
+        True if the activity name contains 'approval'
+    """
+    return re.search(r"approval", str(name), re.IGNORECASE) is not None
 
-    # Check if the total duration exceeds the available time in the quarter
-    earliest_possible_start_date = current_date + timedelta(days=1)  # Adjusted for final start date
-    if earliest_possible_start_date < datetime.now():
-        print(f"Warning: The plan cannot fit within the target quarter {ratification_quarter}.")
-        print("Recalculating the schedule to fit the earliest possible start date...\n")
-        earliest_start_date = datetime.now().strftime("%Y-%m-%d")
-        return calculate_dates_forward(earliest_start_date, path), summary
 
-    return calculated_dates, summary
+def is_governing_committee_review(name):
+    """
+    Check if an activity name indicates a governing committee review.
 
-def calculate_dates_forward(start_date_str, path, replan_phase=None):
+    Args:
+        name: Activity name to check
+
+    Returns:
+        True if the activity is a governing committee review
+    """
+    return (
+        re.search(r"governing[\s-]*committee[\s-]*review", str(name).lower())
+        is not None
+    )
+
+
+def is_internal_review(name):
+    """
+    Check if an activity name indicates an internal review.
+
+    Args:
+        name: Activity name to check
+
+    Returns:
+        True if the activity is an internal review
+    """
+    return re.search(r"internal[\s-]*review", str(name).lower()) is not None
+
+
+def effective_duration_for(activity_name, base_duration, estimate_mode):
+    """
+    Calculate the effective duration for an activity based on the estimate mode.
+
+    Certain activities (public reviews, approvals, committee reviews) always use
+    the base duration. Other activities are adjusted based on the estimate mode:
+    - optimistic: 70% of base duration (minimum 1 day)
+    - pessimistic: 130% of base duration
+    - most_likely: base duration unchanged
+
+    Args:
+        activity_name: Name of the activity
+        base_duration: Base duration in days
+        estimate_mode: Estimation mode (optimistic, most_likely, or pessimistic)
+
+    Returns:
+        Effective duration in days
+    """
+    if base_duration == 0:
+        return 0
+    # Fixed duration activities - not subject to estimation adjustments
+    if is_public_review_activity(activity_name):
+        return base_duration
+    if (
+        is_approval_activity(activity_name)
+        or is_governing_committee_review(activity_name)
+        or is_internal_review(activity_name)
+    ):
+        return base_duration
+    # Apply estimation mode adjustments for other activities
+    if estimate_mode == "optimistic":
+        return max(1, math.floor(base_duration * 0.7))
+    if estimate_mode == "pessimistic":
+        return math.ceil(base_duration * 1.3)
+    return base_duration
+
+
+def get_last_thursday(year, month):
+    """
+    Calculate the date of the last Thursday of a given month.
+
+    This is used for BoD (Board of Directors) approval meetings which are
+    typically scheduled on the last Thursday of the month.
+
+    Args:
+        year: Year
+        month: Month (1-12)
+
+    Returns:
+        datetime object representing the last Thursday of the month
+    """
+    last_day = calendar.monthrange(year, month)[1]
+    last_day_date = datetime(year, month, last_day)
+    # Calculate days to go back to reach Thursday
+    offset = (last_day_date.weekday() - calendar.THURSDAY) % 7
+    return last_day_date - timedelta(days=offset)
+
+
+def calculate_schedule(
+    activities, start_date_str, start_from, handoff_mode, estimate_mode
+):
+    """
+    Calculate the complete project schedule based on activities and parameters.
+
+    Args:
+        activities: Dictionary of activities organized by phase
+        start_date_str: Start date in YYYY-MM-DD format
+        start_from: Phase to start from (earlier phases have zero duration)
+        handoff_mode: Task dependency mode ('end_to_start' or 'start_when_end')
+        estimate_mode: Estimation mode (optimistic, most_likely, or pessimistic)
+
+    Returns:
+        Tuple of (calculated_dates, summary) where:
+        - calculated_dates: List of tuples (phase, task, start, end, duration)
+        - summary: Dictionary with total days, ratification text, and phase summary
+    """
     start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
-    current_date = start_date
+    current_start_date = start_date
+    start_from_index = PHASE_ORDER.index(start_from)
+    # Gap between tasks: 1 day for end_to_start, 0 for start_when_end
+    gap_days = 1 if handoff_mode == "end_to_start" else 0
+
     calculated_dates = []
-    phases = ["Inception", "Plan", "Development", "Freeze", "Ratification-Ready"]
-    summary = {}
-    summary_list = []
-    bod_approval_end_date = None
+    summary_phases = []
+    overall_start = None
+    overall_end = None
+    last_end_date = None
+    bod_end_date = None  # Track BoD approval date for ratification quarter
 
-    if replan_phase:
-        for phase in phases:
-            if phase == replan_phase:
-                break
-            if phase == "Inception":
-                calculated_dates.extend([(phase, task_name, None, None, None) for task_name, _ in activities["Inception"][path]])
-            else:
-                calculated_dates.extend([(phase, task_name, None, None, None) for task_name, _ in activities[phase]])
+    # Iterate through all phases in order
+    for phase in PHASE_ORDER:
+        if phase not in activities:
+            raise ValueError(f"Missing phase '{phase}' in {ACTIVITIES_FILE}.")
 
-        phases = phases[phases.index(replan_phase):]
+        phase_tasks = activities[phase]
+        phase_start = None
+        phase_end = None
 
-    total_days = 0
-    ratification_quarter = None
+        # Process each task in the current phase
+        for task_name, duration in phase_tasks:
+            try:
+                base_duration = int(duration)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"Invalid duration for '{task_name}' in '{phase}': {duration}"
+                ) from exc
 
-    for phase in phases:
-        phase_activities = activities[phase] if phase != "Inception" else activities["Inception"][path]
-        phase_tasks = []
-        phase_duration = 0
+            # Set duration to 0 for phases before the start_from phase
+            if PHASE_ORDER.index(phase) < start_from_index:
+                base_duration = 0
 
-        for task_name, duration in phase_activities:
-            if duration == 0:
-                continue  # Skip tasks with a duration of 0 days
+            # Calculate effective duration based on estimate mode
+            effective_duration = effective_duration_for(
+                task_name, base_duration, estimate_mode
+            )
 
+            start_date = current_start_date
+            end_date = start_date
+            if effective_duration != 0:
+                # End date is start + duration - 1 (inclusive)
+                end_date = start_date + timedelta(days=effective_duration - 1)
+
+            # Special handling for BoD Approval: must be on last Thursday of month
             if task_name == "BoD Approval":
-                last_thursday = calculate_last_thursday(current_date.year, current_date.month)
-                start_date = end_date = last_thursday
-                bod_approval_end_date = end_date  # Track the BoD Approval end date
-            else:
-                start_date = current_date
-                end_date = start_date + timedelta(days=duration - 1)
-                current_date = end_date  # Set current date to end_date for next task
-                phase_duration += duration
+                # Ensure at least 10 days from last activity
+                min_date = (
+                    last_end_date + timedelta(days=10)
+                    if last_end_date
+                    else start_date
+                )
+                last_thursday = get_last_thursday(min_date.year, min_date.month)
+                # If last Thursday of current month is too early, use next month
+                if last_thursday < min_date:
+                    next_month = min_date.month + 1
+                    next_year = min_date.year + (1 if next_month > 12 else 0)
+                    if next_month > 12:
+                        next_month = 1
+                    last_thursday = get_last_thursday(next_year, next_month)
+                end_date = last_thursday
+                bod_end_date = end_date
 
-            phase_tasks.append((phase, task_name, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), duration))
+            # Store the calculated task dates
+            calculated_dates.append(
+                (
+                    phase,
+                    task_name,
+                    start_date.strftime("%Y-%m-%d"),
+                    end_date.strftime("%Y-%m-%d"),
+                    effective_duration,
+                )
+            )
 
-        calculated_dates.extend(phase_tasks)
-        summary_list.append((phase, phase_tasks[0][2], phase_tasks[-1][3], phase_duration))
-        total_days += phase_duration
+            # Track phase boundaries
+            if phase_start is None:
+                phase_start = start_date
+            phase_end = end_date
 
-        if phase == "Ratification-Ready":
-            phase_end_date = end_date  # Ensure phase_end_date is defined
-            ratification_quarter = calculate_quarter(phase_end_date)
+            # Track overall project boundaries
+            if overall_start is None:
+                overall_start = start_date
+            overall_end = end_date
+            last_end_date = end_date
 
-    summary["total_days"] = total_days
-    summary["ratification_quarter"] = ratification_quarter
+            # Move to next task start date (with gap if configured)
+            if task_name == "BoD Approval" or effective_duration > 0:
+                current_start_date = end_date + timedelta(days=gap_days)
 
-    if bod_approval_end_date:
-        quarter = int(ratification_quarter[1])
-        quarter_start = get_last_day_of_quarter(bod_approval_end_date.year, quarter - 1) + timedelta(days=1) if quarter > 1 else datetime(bod_approval_end_date.year, 1, 1)
-        quarter_end = get_last_day_of_quarter(bod_approval_end_date.year, quarter)
-        ratification_position = get_ratification_position_in_quarter(bod_approval_end_date, quarter_start, quarter_end)
-        summary["ratification_position"] = f"Ratification will happen in the {ratification_position} {ratification_quarter}."
-    else:
-        summary["ratification_position"] = ""
+        # Add phase summary if it has activities
+        if phase_start and phase_end:
+            phase_duration = max(1, (phase_end - phase_start).days + 1)
+            summary_phases.append(
+                (
+                    phase,
+                    phase_start.strftime("%Y-%m-%d"),
+                    phase_end.strftime("%Y-%m-%d"),
+                    phase_duration,
+                )
+            )
+        else:
+            # Phase was skipped or has no activities
+            summary_phases.append((phase, "", "", 0))
 
-    summary["phases"] = summary_list
+    # Calculate total project duration
+    total_days = 0
+    if overall_start and overall_end:
+        total_days = max(1, (overall_end - overall_start).days + 1)
+
+    # Generate ratification quarter information based on BoD approval date
+    ratification_text = ""
+    if bod_end_date:
+        quarter = (bod_end_date.month - 1) // 3 + 1
+        ratification_text = (
+            f"Ratification will happen in Q{quarter}{bod_end_date.year}, "
+            f"with the BoD meeting on {bod_end_date.strftime('%Y-%m-%d')}."
+        )
+
+    summary = {
+        "total_days": total_days,
+        "ratification_text": ratification_text,
+        "phases": summary_phases,
+    }
     return calculated_dates, summary
+
 
 def print_summary(summary):
-    ratification = summary.get("ratification_quarter", "N/A")
-    ratification_position = summary.get("ratification_position", "")
-    print(f"\nTotal Duration: {summary['total_days']} days | Ratification: {ratification} | {ratification_position}")
-    summary_table = []
-    for phase, start_date, end_date, duration in summary["phases"]:
-        summary_table.append([
-            phase,
-            start_date,
-            end_date,
-            duration
-        ])
+    """
+    Print a high-level summary of the project schedule.
+
+    Displays total duration, ratification information, and a table of phases
+    with their start/end dates and durations.
+
+    Args:
+        summary: Summary dictionary from calculate_schedule
+    """
+    ratification_text = summary.get("ratification_text", "")
+    print(f"\nTotal Duration: {summary['total_days']} days")
+    if ratification_text:
+        print(ratification_text)
+    summary_table = [
+        [phase, start_date, end_date, duration]
+        for phase, start_date, end_date, duration in summary["phases"]
+    ]
     headers = ["Phase", "Start Date", "End Date", "Duration (Days)"]
     print(tabulate(summary_table, headers, tablefmt="pretty"))
 
+
 def print_schedule_table(calculated_dates):
+    """
+    Print a detailed schedule table showing all activities.
+
+    Displays each activity with its phase, start date, end date, and duration
+    in a formatted table.
+
+    Args:
+        calculated_dates: List of calculated task dates from calculate_schedule
+    """
     table = []
-    phases_order = ["Inception", "Plan", "Development", "Freeze", "Ratification-Ready"]
-    for phase in phases_order:
+    # Group tasks by phase in the correct order
+    for phase in PHASE_ORDER:
         phase_tasks = [item for item in calculated_dates if item[0] == phase]
         table.extend(phase_tasks)
     headers = ["Phase", "Activity", "Start Date", "End Date", "Duration (Days)"]
     print(tabulate(table, headers, tablefmt="pretty"))
 
-def print_help():
-    help_message = """
-Usage: python script_name.py <path> [OPTIONS]
 
-Script to calculate project timelines based on the path ('regular' or 'fast-track').
-
-Modes of Operation:
-  1. Default Mode (Forward Calculation):
-     - This mode calculates the project timeline starting from today's date or a specified start date.
-     - Usage: python script_name.py <path>
-     - Example: python script_name.py regular
-
-  2. Reverse Mode:
-     - This mode calculates the project timeline in reverse, starting from a target ratification quarter.
-     - Requires the --reverse and --target-quarter options.
-     - Usage: python script_name.py <path> --reverse --target-quarter=<Q1XX>
-     - Example: python script_name.py regular --reverse --target-quarter=Q425
-
-  3. Replan Mode:
-     - This mode recalculates the project timeline starting from a specified phase (e.g., 'Development').
-     - Optionally, a new start date can be provided.
-     - Usage: python script_name.py <path> --replan=<phase> [--start-date=<YYYY-MM-DD>]
-     - Example: python script_name.py fast-track --replan=Freeze
-     - Example: python script_name.py regular --replan=Development --start-date=2024-11-01
-
-Options:
-  --reverse                Run the script in reverse mode to backtrack from a target ratification quarter.
-  --target-quarter=<Q1XX>  Specify the target ratification quarter (e.g., Q425 for Q4 of 2025).
-  --replan=<phase>         Recalculate the timeline starting from the specified phase.
-  --start-date=<YYYY-MM-DD>  Provide a specific start date for forward or replan mode.
-  --help                   Display this help message.
-
-Examples:
-  1. Default Mode:
-     python script_name.py regular
-
-  2. Reverse Mode:
-     python script_name.py regular --reverse --target-quarter=Q425
-
-  3. Replan Mode:
-     python script_name.py fast-track --replan=Development --start-date=2024-10-01
+def build_plan_summary(calculated_dates):
     """
-    print(help_message)
+    Build a milestone-focused summary of the project plan.
+
+    Extracts key milestones from the calculated schedule and formats them
+    as a list of milestone labels with their target dates.
+
+    Args:
+        calculated_dates: List of calculated task dates from calculate_schedule
+
+    Returns:
+        List of [milestone_label, date] pairs for display
+    """
+    # Convert calculated dates into a more query-friendly format
+    rows = [
+        {
+            "phase": phase,
+            "activity": activity,
+            "start": start_date,
+            "end": end_date,
+        }
+        for phase, activity, start_date, end_date, _ in calculated_dates
+    ]
+    # Group rows by phase for easier lookup
+    rows_by_phase = {}
+    for row in rows:
+        rows_by_phase.setdefault(row["phase"], []).append(row)
+
+    def find_by_activity(activity_substr, phase_filter=None):
+        """Find a row by activity name substring and optional phase filter."""
+        for row in rows:
+            if activity_substr in row["activity"]:
+                if phase_filter is None or row["phase"] == phase_filter:
+                    return row
+        return None
+
+    # Define the key milestones to extract from the schedule
+    milestones = [
+        {
+            "label": "Inception Completed by",
+            "dateType": "end",
+            "phase": "Inception",
+        },
+        {"label": "Plan Approved by", "dateType": "end", "phase": "Planning"},
+        {
+            "label": "Specification Development Completed (v0.6) by",
+            "dateType": "end",
+            "activity": "Governing Committee Approval",
+            "phase": "Development",
+        },
+        {
+            "label": "Internal Review Start (v0.6) by",
+            "dateType": "start",
+            "activity": "Internal Review (14-day minimum)",
+            "phase": "Development",
+        },
+        {
+            "label": "Specification Stabilized (v0.8) by",
+            "dateType": "end",
+            "phase": "Stabilization",
+        },
+        {
+            "label": "ARC Freeze Approval Request by",
+            "dateType": "start",
+            "phase": "Freezing",
+        },
+        {
+            "label": "Specification Frozen (v0.9) by",
+            "dateType": "end",
+            "phase": "Freezing",
+        },
+        {
+            "label": "Public Review Start (v0.9) by",
+            "dateType": "start",
+            "phase": "Ratification-Ready",
+        },
+        {
+            "label": "TSC Approval (v0.99) by",
+            "dateType": "end",
+            "phase": "Ratification-Ready",
+        },
+        {
+            "label": "Specification Ratified (v1.0) by",
+            "dateType": "end",
+            "phase": "Publication",
+        },
+    ]
+
+    # Extract milestone dates from the schedule
+    summary_rows = []
+    for milestone in milestones:
+        relevant_row = None
+        activity = milestone.get("activity")
+        phase = milestone.get("phase")
+
+        # Find the relevant activity or phase
+        if activity:
+            relevant_row = find_by_activity(activity, milestone.get("phaseFilter"))
+        elif phase:
+            phase_rows = rows_by_phase.get(phase, [])
+            if phase_rows:
+                # Use first row for start dates, last row for end dates
+                relevant_row = (
+                    phase_rows[0]
+                    if milestone["dateType"] == "start"
+                    else phase_rows[-1]
+                )
+
+        # Special case: Specification Development uses Governing Committee Approval date
+        if (
+            milestone["label"]
+            == "Specification Development Completed (v0.6) by"
+        ):
+            override_row = find_by_activity(
+                "Governing Committee Approval", phase_filter="Development"
+            )
+            if override_row:
+                relevant_row = override_row
+
+        # Extract the appropriate date (start or end) from the relevant row
+        if relevant_row:
+            date_value = (
+                relevant_row["start"]
+                if milestone["dateType"] == "start"
+                else relevant_row["end"]
+            )
+        else:
+            date_value = "N/A"
+
+        summary_rows.append([milestone["label"], date_value])
+
+    return summary_rows
+
+
+def print_plan_summary(summary_rows):
+    """
+    Print a table of key milestones and their target dates.
+
+    Args:
+        summary_rows: List of [milestone_label, date] pairs from build_plan_summary
+    """
+    headers = ["Plan Summary", "Date"]
+    print(tabulate(summary_rows, headers, tablefmt="pretty"))
+
+
+def slugify_filename(value):
+    """
+    Convert a string to a filesystem-safe slug.
+
+    Converts to lowercase, replaces spaces with hyphens, removes special
+    characters, and consolidates multiple hyphens.
+
+    Args:
+        value: String to slugify
+
+    Returns:
+        Slugified string safe for use in filenames
+    """
+    normalized = str(value).strip().lower().replace(" ", "-")
+    # Remove non-alphanumeric characters (except hyphens and underscores)
+    normalized = re.sub(r"[^a-z0-9_-]+", "-", normalized)
+    # Consolidate multiple hyphens
+    normalized = re.sub(r"-{2,}", "-", normalized).strip("-")
+    return normalized or "phase"
+
+
+def build_summary_csv_filename(start_from, estimate_mode, start_date_str):
+    """
+    Build a descriptive filename for the CSV export.
+
+    Format: {phase}_{estimate_mode}_{start_date}_.csv
+
+    Args:
+        start_from: Starting phase name
+        estimate_mode: Estimation mode used
+        start_date_str: Start date string
+
+    Returns:
+        CSV filename string
+    """
+    phase_part = slugify_filename(start_from)
+    estimate_part = slugify_filename(estimate_mode)
+    return f"{phase_part}_{estimate_part}_{start_date_str}_.csv"
+
+
+def write_plan_summary_csv(summary_rows, filename):
+    """
+    Write the plan summary to a CSV file.
+
+    Args:
+        summary_rows: List of [milestone_label, date] pairs
+        filename: Output CSV filename
+    """
+    with open(filename, "w", newline="") as file:
+        writer = csv.writer(file)
+        for row in summary_rows:
+            writer.writerow(row)
+
+
+def build_parser():
+    """
+    Build the command-line argument parser.
+
+    Returns:
+        Configured ArgumentParser instance
+    """
+    parser = argparse.ArgumentParser(
+        description="Calculate project timelines based on web activities."
+    )
+    parser.add_argument(
+        "--start-date",
+        default=datetime.now().strftime("%Y-%m-%d"),
+        help="Start date in YYYY-MM-DD format (default: today).",
+    )
+    parser.add_argument(
+        "--start-from",
+        default="Inception",
+        help="Phase to start from; earlier phases are set to zero duration.",
+    )
+    parser.add_argument(
+        "--handoff-mode",
+        choices=["end_to_start", "start_when_end"],
+        default="end_to_start",
+        help="Task dependency mode (next day or same day).",
+    )
+    parser.add_argument(
+        "--estimate-mode",
+        choices=["most_likely", "optimistic", "pessimistic"],
+        default="most_likely",
+        help="Three-point estimate mode.",
+    )
+    parser.add_argument(
+        "--csv",
+        action="store_true",
+        help="Write the plan summary CSV to the current directory.",
+    )
+    return parser
+
+
+def main():
+    """
+    Main entry point for the plan editor CLI.
+
+    Parses command-line arguments, calculates the project schedule, and
+    displays/exports the results based on user options.
+    """
+    parser = build_parser()
+    args = parser.parse_args()
+
+    # Validate and parse the start_from phase
+    try:
+        start_from = parse_phase(args.start_from)
+    except ValueError as exc:
+        print(exc)
+        raise SystemExit(1)
+
+    # Load activities and calculate schedule
+    activities = load_activities_from_yaml(ACTIVITIES_FILE)
+    calculated_dates, summary = calculate_schedule(
+        activities,
+        args.start_date,
+        start_from,
+        args.handoff_mode,
+        args.estimate_mode,
+    )
+    summary_rows = build_plan_summary(calculated_dates)
+
+    # Display results
+    print_summary(summary)
+    print_plan_summary(summary_rows)
+    print_schedule_table(calculated_dates)
+
+    # Export to CSV if requested
+    if args.csv:
+        filename = build_summary_csv_filename(
+            start_from, args.estimate_mode, args.start_date
+        )
+        write_plan_summary_csv(summary_rows, filename)
+        print(f"\nWrote plan summary CSV to {filename}")
+
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2 or "--help" in sys.argv:
-        print_help()
-        sys.exit(0)
-
-    replan_phase = None
-    start_date_str = datetime.now().strftime("%Y-%m-%d")  # Default to current date
-    target_quarter = None
-
-    for arg in sys.argv:
-        if arg.startswith("--replan"):
-            replan_phase = arg.split("=")[1]
-        if arg.startswith("--start-date"):
-            start_date_str = arg.split("=")[1]
-        if arg.startswith("--target-quarter"):
-            target_quarter = arg.split("=")[1]
-
-    path = sys.argv[1].lower()
-
-    if path not in ["regular", "fast-track"]:
-        print("Invalid path. Choose either 'regular' or 'fast-track'.")
-        sys.exit(1)
-
-    if "--reverse" in sys.argv:
-        if not target_quarter:
-            print("Error: --reverse requires --target-quarter to be specified.")
-            sys.exit(1)
-        calculated_dates, summary = calculate_dates_reverse(target_quarter, path)
-    else:
-        calculated_dates, summary = calculate_dates_forward(start_date_str, path, replan_phase)
-
-    print_summary(summary)
-    print_schedule_table(calculated_dates)
+    main()
