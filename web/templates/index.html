@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/x-icon" href="static/favicon.ico" />
     <title>RISC-V Spec Plan Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
@@ -13,359 +19,599 @@
       referrerpolicy="no-referrer"
     />
     <style>
+      :root {
+        --bg: #f3f5fa;
+        --surface: #ffffff;
+        --surface-muted: #f8fafc;
+        --border: #e4e7ef;
+        --text: #0f172a;
+        --muted: #64748b;
+        --brand: #283272; /* RISC-V navy */
+        --brand-hover: #1d2558;
+        --gold: #f6b21b; /* RISC-V gold */
+        --radius: 14px;
+        --shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+          0 8px 24px rgba(15, 23, 42, 0.06);
+
+        --inception: #8b5cf6;
+        --planning: #3b82f6;
+        --development: #10b981;
+        --stabilization: #ec4899;
+        --freezing: #f59e0b;
+        --ratification-ready: #ef4444;
+        --publication: #6366f1;
+      }
+
+      /* Per-phase color + tint (rgba, not color-mix, so html2canvas renders it) */
+      .inception { --phase: var(--inception); --phase-tint: rgba(139, 92, 246, 0.07); }
+      .planning { --phase: var(--planning); --phase-tint: rgba(59, 130, 246, 0.07); }
+      .development { --phase: var(--development); --phase-tint: rgba(16, 185, 129, 0.07); }
+      .stabilization { --phase: var(--stabilization); --phase-tint: rgba(236, 72, 153, 0.07); }
+      .freezing { --phase: var(--freezing); --phase-tint: rgba(245, 158, 11, 0.08); }
+      .ratification-ready { --phase: var(--ratification-ready); --phase-tint: rgba(239, 68, 68, 0.07); }
+      .publication { --phase: var(--publication); --phase-tint: rgba(99, 102, 241, 0.07); }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        font-family: Arial, sans-serif;
-        background-color: #f8f9fa;
         margin: 0;
-        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+          sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
       }
 
       .container {
-        max-width: 1000px;
-        margin: 20px auto;
-        padding: 20px;
-        background-color: white;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 32px 16px 48px;
+        background: var(--bg);
+      }
+
+      /* ---------- Header ---------- */
+      .app-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .brand img {
+        height: 34px;
+        width: auto;
+      }
+
+      .brand-divider {
+        width: 1px;
+        height: 34px;
+        background: var(--border);
       }
 
       h1 {
-        text-align: center;
-        color: #0c2f6c;
-        font-size: 1.8em;
-        margin-bottom: 20px;
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: var(--brand);
       }
 
-      .info-bar {
-        background-color: #e0f2f7; /* Lighter blue */
-        padding: 10px;
+      .subtitle {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      /* ---------- Buttons ---------- */
+      .button-container {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+      }
+
+      .btn:hover {
+        background: var(--surface-muted);
+        border-color: #cbd2e0;
+      }
+
+      .btn:focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+      }
+
+      .btn i {
+        font-size: 0.85em;
+        color: var(--muted);
+      }
+
+      .btn.primary {
+        background: var(--brand);
+        border-color: var(--brand);
+        color: #fff;
+      }
+
+      .btn.primary i {
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .btn.primary:hover {
+        background: var(--brand-hover);
+      }
+
+      /* ---------- Cards ---------- */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
         margin-bottom: 20px;
-        border-radius: 8px;
-        text-align: center;
-        font-size: 1.2em;
-        color: #0d47a1; /* Darker blue text */
+        overflow: hidden;
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .card-title {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+
+      .card-hint {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .approval-icon {
+        color: #ea580c;
+        margin-left: 6px;
+        font-size: 0.85em;
+      }
+
+      /* ---------- Controls ---------- */
+      .controls-toolbar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        padding: 18px 20px;
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+      }
+
+      select,
+      input[type="date"] {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+
+      select {
+        appearance: none;
+        padding-right: 34px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        cursor: pointer;
+      }
+
+      select:focus,
+      input[type="date"]:focus {
+        outline: none;
+        border-color: var(--brand);
+        box-shadow: 0 0 0 3px rgba(40, 50, 114, 0.15);
+      }
+
+      /* ---------- Outcome ---------- */
+      .info-bar {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 20px 24px;
+        margin-bottom: 20px;
+        border-radius: var(--radius);
+        background: linear-gradient(135deg, #283272 0%, #3b4aa0 100%);
+        color: #fff;
+        box-shadow: var(--shadow);
+      }
+
+      .info-icon {
+        display: grid;
+        place-items: center;
+        width: 48px;
+        height: 48px;
+        flex-shrink: 0;
+        border-radius: 12px;
+        background: rgba(246, 178, 27, 0.18);
+        color: var(--gold);
+        font-size: 1.3rem;
+      }
+
+      .info-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        opacity: 0.75;
+      }
+
+      .info-value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+      }
+
+      .info-detail {
+        font-size: 0.9rem;
+        opacity: 0.85;
       }
 
       .summary-bar {
-        display: flex;
-        justify-content: space-around;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+        gap: 12px;
         margin-bottom: 20px;
       }
 
       .summary-item {
-        padding: 10px;
-        border-radius: 6px;
-        color: white;
-        text-align: center;
-        font-size: 0.7em;
-        min-width: 105px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 14px 16px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-top: 3px solid var(--phase);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
       }
 
-      /* More distinct colors for summary items */
-      .summary-item.inception {
-        background-color: #9c27b0; /* Purple */
+      .summary-phase {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--phase);
       }
 
-      .summary-item.planning {
-        background-color: #2196f3; /* Blue */
+      .summary-days {
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
       }
 
-      .summary-item.development {
-        background-color: #4caf50; /* Green */
+      .summary-end {
+        font-size: 0.75rem;
+        white-space: nowrap;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
       }
 
-      .summary-item.stabilization {
-        background-color: #e91e63; /* Pink */
-      }
-
-      .summary-item.freezing {
-        background-color: #ff9800; /* Orange */
-      }
-
-      .summary-item.ratification-ready {
-        background-color: #f44336; /* Red */
-      }
-
-      .summary-item.publication {
-        background-color: #3f51b5; /* Indigo */
+      /* ---------- Tables ---------- */
+      .table-wrap {
+        overflow-x: auto;
       }
 
       table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 20px;
-        font-size: 0.88em;
-        border-radius: 8px;
-        overflow: hidden;
-      }
-
-      table,
-      th,
-      td {
-        border: 1px solid #ddd;
-      }
-
-      th,
-      td {
-        padding: 6px; /* Uniform padding across tables */
-        text-align: left; /* Left-align text */
-        border: 1px solid #ddd; /* Consistent border for both tables */
+        font-size: 0.875rem;
       }
 
       th {
-        background-color: #2962ff; /* Darker blue */
-        color: white;
+        padding: 10px 16px;
+        text-align: left;
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        background: var(--surface-muted);
+        border-bottom: 1px solid var(--border);
+        white-space: nowrap;
+      }
+
+      td {
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      tbody tr[class] {
+        background: var(--phase-tint);
+      }
+
+      tbody tr[class] td:first-child {
+        box-shadow: inset 4px 0 0 var(--phase);
+      }
+
+      tbody tr:hover {
+        background: var(--surface-muted);
+      }
+
+      .phase-chip {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 999px;
+        background: var(--surface);
+        border: 1px solid var(--phase);
+        color: var(--phase);
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .start-date,
+      .end-date,
+      #summary-table-container td:last-child {
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      .start-date input[type="date"] {
+        width: auto;
+        padding: 5px 8px;
       }
 
       .slider-container {
         display: flex;
         align-items: center;
+        gap: 10px;
+        min-width: 180px;
       }
 
       .slider {
         flex-grow: 1;
-        margin-right: 10px;
-      }
-
-      .button-container {
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-        margin-top: 20px;
-      }
-
-      .button {
-        padding: 10px 15px;
-        background-color: #f44336;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: 1em;
+        height: 6px;
+        margin: 0;
+        border-radius: 999px;
+        background: var(--border);
+        appearance: none;
+        -webkit-appearance: none;
         cursor: pointer;
+      }
+
+      .slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--phase, var(--brand));
+        border: 2px solid #fff;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+      }
+
+      .slider::-moz-range-thumb {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--phase, var(--brand));
+        border: 2px solid #fff;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+      }
+
+      .slider:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .slider-value {
+        min-width: 36px;
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: var(--surface);
+        border: 1px solid var(--border);
         text-align: center;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
       }
 
-      .button.small {
-        padding: 5px 10px;
-        font-size: 0.9em;
+      @media (max-width: 640px) {
+        .container {
+          padding-top: 20px;
+        }
+        .brand-divider,
+        .brand img {
+          display: none;
+        }
+        .info-value {
+          font-size: 1.3rem;
+        }
       }
-
-      .button.blue {
-        background-color: #4285f4;
-      }
-
-      .button:hover {
-        opacity: 0.9;
-      }
-
-      /* More distinct and slightly more opaque colors for rows */
-      tr.inception {
-        background-color: rgba(156, 39, 176, 0.2);
-      }
-
-      tr.planning {
-        background-color: rgba(33, 150, 243, 0.2);
-      }
-
-      tr.development {
-        background-color: rgba(76, 175, 80, 0.2);
-      }
-
-      tr.stabilization {
-        background-color: rgba(233, 30, 99, 0.2);
-      }
-
-      tr.freezing {
-        background-color: rgba(255, 152, 0, 0.2);
-      }
-
-      tr.ratification-ready {
-        background-color: rgba(244, 67, 54, 0.2);
-      }
-
-      tr.publication {
-        background-color: rgba(63, 81, 181, 0.2);
-      }
-
-      #summary-table-container table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-        font-size: 0.9em;
-        border-radius: 8px;
-        overflow: hidden;
-      }
-
-      #summary-table-container th,
-      #summary-table-container td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-      }
-
-      #summary-table-container th {
-        background-color: #2962ff;
-        color: white;
-      }
-
-      #summary-table-container tr.inception {
-        background-color: rgba(156, 39, 176, 0.2);
-      }
-
-      #summary-table-container tr.planning {
-        background-color: rgba(33, 150, 243, 0.2);
-      }
-
-      #summary-table-container tr.development {
-        background-color: rgba(76, 175, 80, 0.2);
-      }
-
-      #summary-table-container tr.stabilization {
-        background-color: rgba(233, 30, 99, 0.2);
-      }
-
-      #summary-table-container tr.freezing {
-        background-color: rgba(255, 152, 0, 0.2);
-      }
-
-      #summary-table-container tr.ratification-ready {
-        background-color: rgba(244, 67, 54, 0.2);
-      }
-
-      #summary-table-container tr.publication {
-        background-color: rgba(63, 81, 181, 0.2);
-      }
-
-      /* Centers the bar, keeps its contents right-justified, responsive */
-      .controls-outer{
-        display:flex;
-        justify-content:center;   /* center the whole bar under the title */
-      }
-
-      .controls-toolbar{
-        display:flex;
-        align-items:center;
-        gap:12px;
-        justify-content:flex-end; /* keep controls “to the right” inside the bar */
-        width:min(100%, 960px);   /* nice readable max width */
-        margin:10px 0 14px;
-        flex-wrap:wrap;           /* wrap gracefully on small screens */
-      }
-
     </style>
   </head>
   <body>
     <div class="container">
-      <img
-        src="static/riscv.png"
-        alt="RISC-V Logo"
-        style="display: block; margin: 0 auto; max-width: 40%; height: auto"
-      />
-      <h1>Spec Plan Editor</h1>
-      <!-- Wrap the existing controls -->
-      <div class="controls-outer">
-        <div class="controls-toolbar">
-          <label for="start-from" style="font-weight:600;">Start From:</label>
-          <select id="start-from" onchange="applyStartFrom(); updateDates();" style="padding:6px 8px;">
-            <option value="Inception" selected>Inception</option>
-            <option value="Planning">Planning</option>
-            <option value="Development">Development</option>
-            <option value="Stabilization">Stabilization</option>
-            <option value="Freezing">Freezing</option>
-            <option value="Ratification-Ready">Ratification-Ready</option>
-            <option value="Publication">Publication</option>
-          </select>
-
-          <label for="handoff-mode" style="font-weight:600; margin-left:16px;">Task Dependency:</label>
-          <select id="handoff-mode" onchange="updateDates()" style="padding:6px 8px;">
-            <option value="end_to_start" selected>End-to-Start (Next Day)</option>
-            <option value="start_when_end">End-to-Start (Same Day)</option>
-          </select>
-
-          <label for="estimate-mode" style="font-weight:600; margin-left:16px;">Three-Point Estimates:</label>
-          <select id="estimate-mode" onchange="updateDates()" style="padding:6px 8px;">
-            <option value="most_likely" selected>Most Likely (M)</option>
-            <option value="optimistic">Optimistic (O)</option>
-            <option value="pessimistic">Pessimistic (P)</option>
-          </select>
+      <header class="app-header">
+        <div class="brand">
+          <img src="static/riscv.png" alt="RISC-V" />
+          <span class="brand-divider"></span>
+          <div class="titles">
+            <h1>Spec Plan Editor</h1>
+            <p class="subtitle">
+              Plan a RISC-V specification's lifecycle, from inception to
+              ratification.
+            </p>
+          </div>
         </div>
-      </div>
-      <table id="timeline-table">
-        <thead>
-          <tr>
-            <th>Phase</th>
-            <th>Activity</th>
-            <th>Start Date</th>
-            <th>End Date</th>
-            <th>Duration (Days)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for phase, activity, start_date, end_date, duration in
-          calculated_dates %}
-          <tr
-            data-phase="{{ phase }}"
-            class="{{ phase|lower|replace(' ', '-') }}"
-            data-default-duration="{{ duration }}"
-          >
-            <td>{{ phase }}</td>
-            <td>
-              {{ activity }} {% if "Approval" in activity %}
-              <i
-                class="fas fa-exclamation-triangle"
-                style="color: rgb(255, 106, 0); margin-left: 5px"
-              ></i>
-              {% endif %}
-            </td>
-            <td class="start-date">
-              {% if loop.first %}
-              <input
-                type="date"
-                id="inception-start-date"
-                value="{{ current_date }}"
-                onchange="updateDates()"
-              />
-              {% else %} {{ start_date }} {% endif %}
-            </td>
-            <td class="end-date">{{ end_date }}</td>
-            <td>
-              <div class="slider-container">
-                <input
-                  type="range"
-                  class="slider"
-                  name="{{ activity.replace(' ', '_') }}_duration"
-                  value="{{ duration }}"
-                  min="0"
-                  max="500"
-                  oninput="updateSlider(this)"
-                  {% if activity == 'BoD Approval' %}
-                  disabled="disabled"
-               {% endif %}
-                />
-                <span class="slider-value">{{ duration }}</span>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+        <div class="button-container">
+          <button class="btn" onclick="resetToDefault()">
+            <i class="fa-solid fa-rotate-left"></i> Reset
+          </button>
+          <button class="btn" onclick="saveImage()">
+            <i class="fa-solid fa-image"></i> Save Image
+          </button>
+          <button class="btn" onclick="savePlanSummary()">
+            <i class="fa-solid fa-list-check"></i> Export Summary
+          </button>
+          <button class="btn primary" onclick="exportCSV()">
+            <i class="fa-solid fa-file-csv"></i> Export Detailed Plan
+          </button>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="controls-toolbar">
+          <div class="field">
+            <label for="start-from">Start From</label>
+            <select id="start-from" onchange="applyStartFrom(); updateDates();">
+              <option value="Inception" selected>Inception</option>
+              <option value="Planning">Planning</option>
+              <option value="Development">Development</option>
+              <option value="Stabilization">Stabilization</option>
+              <option value="Freezing">Freezing</option>
+              <option value="Ratification-Ready">Ratification-Ready</option>
+              <option value="Publication">Publication</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="handoff-mode">Task Dependency</label>
+            <select id="handoff-mode" onchange="updateDates()">
+              <option value="end_to_start" selected>End-to-Start (Next Day)</option>
+              <option value="start_when_end">End-to-Start (Same Day)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="estimate-mode">Three-Point Estimate</label>
+            <select id="estimate-mode" onchange="updateDates()">
+              <option value="most_likely" selected>Most Likely (M)</option>
+              <option value="optimistic">Optimistic (O)</option>
+              <option value="pessimistic">Pessimistic (P)</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">Timeline</h2>
+          <span class="card-hint">
+            Drag a slider to change an activity's duration ·
+            <i class="fa-solid fa-triangle-exclamation approval-icon" style="margin:0"></i>
+            approval step
+          </span>
+        </div>
+        <div class="table-wrap">
+          <table id="timeline-table">
+            <thead>
+              <tr>
+                <th>Phase</th>
+                <th>Activity</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Duration (Days)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for phase, activity, start_date, end_date, duration in
+              calculated_dates %}
+              <tr
+                data-phase="{{ phase }}"
+                class="{{ phase|lower|replace(' ', '-') }}"
+                data-default-duration="{{ duration }}"
+              >
+                <td><span class="phase-chip">{{ phase }}</span></td>
+                <td>
+                  {{ activity }} {% if "Approval" in activity %}
+                  <i
+                    class="fa-solid fa-triangle-exclamation approval-icon"
+                    title="Approval step"
+                  ></i>
+                  {% endif %}
+                </td>
+                <td class="start-date">
+                  {% if loop.first %}
+                  <input
+                    type="date"
+                    id="inception-start-date"
+                    value="{{ current_date }}"
+                    onchange="updateDates()"
+                  />
+                  {% else %} {{ start_date }} {% endif %}
+                </td>
+                <td class="end-date">{{ end_date }}</td>
+                <td>
+                  <div class="slider-container">
+                    <input
+                      type="range"
+                      class="slider"
+                      name="{{ activity.replace(' ', '_') }}_duration"
+                      value="{{ duration }}"
+                      min="0"
+                      max="500"
+                      oninput="updateSlider(this)"
+                      {% if activity == 'BoD Approval' %}
+                      disabled="disabled"
+                      {% endif %}
+                    />
+                    <span class="slider-value">{{ duration }}</span>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <div id="summary-bar" class="summary-bar"></div>
       <div id="info-bar" class="info-bar"></div>
-      <div id="summary-table-container"></div>
-      <div class="button-container">
-        <button class="button small" onclick="resetToDefault()">
-          Reset to Default
-        </button>
-        <button class="button blue small" onclick="saveImage()">
-          Save Image
-        </button>
-        <button class="button blue small" onclick="exportCSV()">
-          Export Detailed Plan
-        </button>
-        <button class="button blue small" onclick="savePlanSummary()">
-          Export Plan Summary
-        </button>
-      </div>
+
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">Plan Summary</h2>
+          <span class="card-hint">Key milestones and target dates</span>
+        </div>
+        <div id="summary-table-container" class="table-wrap"></div>
+      </section>
     </div>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script>
@@ -374,8 +620,7 @@
         const inceptionDateInput = document.getElementById(
           "inception-start-date"
         );
-        const currentDate = new Date().toISOString().split("T")[0];
-        inceptionDateInput.value = currentDate;
+        inceptionDateInput.value = todayISO();
         // Enforce Start-From default behavior (Inception)
         applyStartFrom();
         // Update dates based on the current default inception start date
@@ -439,25 +684,28 @@
         return (input ? input.value : (cell?.textContent || "")).trim();
       }
 
-      function getHandoffGapDays() {
-        const mode = document.getElementById("handoff-mode")?.value || "end_to_start";
-        // end_to_start => gap of 1 day; start_when_end => gap of 0 days
-        return mode === "end_to_start" ? 1 : 0;
+      // All plan dates are UTC midnights ("YYYY-MM-DD" parses as UTC) and are
+      // only manipulated with the getUTC/setUTC methods. Mixing in local-time
+      // methods shifts dates by a day east of UTC and across DST changes.
+      function toISODate(date) {
+        return date.toISOString().split("T")[0];
       }
 
-      function getEstimateMode() {
-        return document.getElementById("estimate-mode")?.value || "most_likely";
+      function todayISO() {
+        const now = new Date();
+        return toISODate(new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())));
       }
 
-      function isApprovalActivity(name) {
-        return /approval/i.test(name); // catches ARC Freeze Approval, Governing Committee Approval, TSC/BoD Approval, etc.
+      function addDays(date, days) {
+        const result = new Date(date);
+        result.setUTCDate(result.getUTCDate() + days);
+        return result;
       }
 
       function getLastThursday(year, month) {
-        const lastDay = new Date(year, month + 1, 0);
-        const offset = (lastDay.getDay() - 4 + 7) % 7;
-        lastDay.setDate(lastDay.getDate() - offset);
-        return lastDay;
+        const lastDay = new Date(Date.UTC(year, month + 1, 0));
+        const offset = (lastDay.getUTCDay() - 4 + 7) % 7;
+        return addDays(lastDay, -offset);
       }
 
       function updateSlider(element) {
@@ -466,28 +714,6 @@
         valueDisplay.textContent = element.value;
 
         updateDates();
-      }
-
-      /**
-       * Compute effective duration based on estimate mode.
-       * - Only applies to tasks that do NOT contain "Approval"
-       * - Zero-duration remains 0 (milestone)
-       * - Never reduce positive durations below 1 day
-       */
-      function effectiveDurationFor(activityName, baseDuration) {
-        if (baseDuration === 0) return 0; // milestone stays a no-op
-        if (isApprovalActivity(activityName)) return baseDuration; // approvals unchanged
-
-        const mode = getEstimateMode();
-        if (mode === "optimistic") {
-          // -10% rounded down, but minimum 1 if base > 0
-          return Math.max(1, Math.floor(baseDuration * 0.9));
-        } else if (mode === "pessimistic") {
-          // +20% rounded up
-          return Math.ceil(baseDuration * 1.2);
-        }
-        // Most Likely (default)
-        return baseDuration;
       }
 
       function updateDates() {
@@ -571,14 +797,11 @@
           const endDateEl     = row.querySelector(".end-date");
 
           // Start date (cursor position)
-          const startStr = currentStartDate.toISOString().split("T")[0];
+          const startStr = toISODate(currentStartDate);
           if (startInput) startInput.value = startStr; else startDateCell.textContent = startStr;
 
           // Default end date from effective duration
-          let endDate = new Date(currentStartDate);
-          if (duration !== 0) {
-            endDate.setDate(endDate.getDate() + duration - 1);
-          }
+          let endDate = duration !== 0 ? addDays(currentStartDate, duration - 1) : new Date(currentStartDate);
 
           // BoD special handling (≥10 days after previous end, then last Thursday)
           if (activityName === "BoD Approval") {
@@ -586,13 +809,12 @@
             const prevEndDateStr = prevRow.querySelector(".end-date").textContent;
             const prevEndDate = new Date(prevEndDateStr);
 
-            const minDate = new Date(prevEndDate);
-            minDate.setDate(minDate.getDate() + 10);
+            const minDate = addDays(prevEndDate, 10);
 
-            let lastThu = getLastThursday(minDate.getFullYear(), minDate.getMonth());
+            let lastThu = getLastThursday(minDate.getUTCFullYear(), minDate.getUTCMonth());
             if (lastThu < minDate) {
-              let nextMonth = minDate.getMonth() + 1;
-              let nextYear = minDate.getFullYear();
+              let nextMonth = minDate.getUTCMonth() + 1;
+              let nextYear = minDate.getUTCFullYear();
               if (nextMonth > 11) { nextMonth = 0; nextYear += 1; }
               lastThu = getLastThursday(nextYear, nextMonth);
             }
@@ -600,13 +822,12 @@
           }
 
           // Commit end date
-          endDateEl.textContent = endDate.toISOString().split("T")[0];
+          endDateEl.textContent = toISODate(endDate);
 
           // Advance cursor:
           const gapDays = getHandoffGapDays();
           if (activityName === "BoD Approval" || duration > 0) {
-            currentStartDate = new Date(endDate);
-            currentStartDate.setDate(currentStartDate.getDate() + gapDays);
+            currentStartDate = addDays(endDate, gapDays);
           }
           // else: zero-duration milestone -> no shift
         });
@@ -617,37 +838,6 @@
         updateInfoBar();
       }
 
-      function updateBodApprovalDate() {
-        const rows = document.querySelectorAll("#timeline-table tbody tr");
-        let lastEndDate = new Date(
-          rows[rows.length - 2].querySelector(".end-date").textContent
-        ); // Get the TSC Approval end date
-
-        const bodApprovalRow = rows[rows.length - 1]; // BoD Approval row
-        adjustBodApprovalDate(bodApprovalRow, lastEndDate);
-      }
-
-      function adjustBodApprovalDate(row, tscEndDate) {
-        let bodApprovalDate = getLastThursday(
-          tscEndDate.getFullYear(),
-          tscEndDate.getMonth()
-        );
-
-        if (tscEndDate > bodApprovalDate) {
-          bodApprovalDate = getLastThursday(
-            tscEndDate.getFullYear(),
-            tscEndDate.getMonth() + 1
-          );
-        }
-
-        row.querySelector(".start-date").textContent = bodApprovalDate
-          .toISOString()
-          .split("T")[0];
-        row.querySelector(".end-date").textContent = bodApprovalDate
-          .toISOString()
-          .split("T")[0];
-      }
-
       function updateInfoBar() {
         const timelineTable = document.getElementById("timeline-table");
         const rows = timelineTable.querySelectorAll("tbody tr");
@@ -655,63 +845,18 @@
         const bodEndDateText = lastRow.querySelector(".end-date").textContent;
         const bodEndDate = new Date(bodEndDateText);
 
-        const quarter = Math.floor((bodEndDate.getMonth() + 3) / 3);
-        const year = bodEndDate.getFullYear();
+        const quarter = Math.floor(bodEndDate.getUTCMonth() / 3) + 1;
+        const year = bodEndDate.getUTCFullYear();
 
-        const quarterText = `Q${quarter}${year}`;
         const infoBar = document.getElementById("info-bar");
-        infoBar.textContent = `Ratification will happen in ${quarterText}, with the BoD meeting on ${bodEndDateText}.`;
-      }
-
-      function updateSummary() {
-        const phases = [
-          "Inception",
-          "Planning",
-          "Development",
-          "Stabilization",
-          "Freezing",
-          "Ratification-Ready",
-          "Publication",
-        ];
-        const summaryBar = document.getElementById("summary-bar");
-        summaryBar.innerHTML = ""; // Clear existing content
-
-        phases.forEach((phase) => {
-          const rows = document.querySelectorAll(
-            `#timeline-table tbody tr[data-phase="${phase}"]`
-          );
-          if (rows.length > 0) {
-            const startDate = rows[0].querySelector(".start-date").textContent;
-            const endDate =
-              rows[rows.length - 1].querySelector(".end-date").textContent;
-
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-
-            // Calculate duration differently for Publication phase
-            let duration;
-            if (phase === "Publication") {
-              duration = parseInt(rows[0].querySelector(".slider").value, 10); // Get the value directly from the slider
-            } else {
-              duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-              if (duration < 0) {
-                duration = 0;
-              }
-            }
-
-            const phaseClass = phase.toLowerCase().replace(/\s/g, "-");
-
-            const summaryItem = `
-                <div class="summary-item ${phaseClass}">
-                    <strong>${phase}</strong><br>
-                    End Date: ${endDate}<br>
-                    ${duration} days
-                </div>
-            `;
-
-            summaryBar.innerHTML += summaryItem;
-          }
-        });
+        infoBar.innerHTML = `
+          <div class="info-icon"><i class="fa-solid fa-flag-checkered"></i></div>
+          <div>
+            <div class="info-label">Projected Ratification</div>
+            <div class="info-value">Q${quarter} ${year}</div>
+            <div class="info-detail">BoD meeting on ${bodEndDateText}</div>
+          </div>
+        `;
       }
 
       function resetToDefault() {
@@ -727,8 +872,9 @@
         });
 
         // Reset Start Date
-        document.getElementById("inception-start-date").value =
-          new Date().toISOString().split("T")[0];
+        document.getElementById("inception-start-date").value = todayISO();
+        document.getElementById("handoff-mode").value = "end_to_start";
+        document.getElementById("estimate-mode").value = "most_likely";
 
         // Reset Start-From to Inception and re-apply policy
         const startFrom = document.getElementById("start-from");
@@ -749,7 +895,7 @@
           const activity = row
             .querySelector("td:nth-child(2)")
             .textContent.trim();
-          readDateFromCell(row.querySelector(".start-date"))
+          const startDate = readDateFromCell(row.querySelector(".start-date"));
           const endDate = row.querySelector(".end-date").textContent.trim();
           const duration = row.querySelector(".slider").value.trim();
 
@@ -758,7 +904,7 @@
         });
 
         // Generate current date in YYYY-MM-DD format
-        const currentDate = new Date().toISOString().split("T")[0];
+        const currentDate = todayISO();
 
         // Create the file name with the current date
         const fileName = `riscv-spec-plan-${currentDate}.csv`;
@@ -774,7 +920,7 @@
       function saveImage() {
         // Hide the buttons and the header temporarily
         const buttons = document.querySelectorAll(".button-container button");
-        const header = document.querySelector("h1");
+        const header = document.querySelector(".app-header .titles");
 
         buttons.forEach((button) => (button.style.display = "none"));
         header.style.display = "none";
@@ -789,7 +935,7 @@
         tempContainer.style.top = "0";
         tempContainer.style.left = "0";
         tempContainer.style.width = "100%";
-        tempContainer.style.backgroundColor = "white"; // Ensure background color
+        tempContainer.style.backgroundColor = "#f3f5fa"; // Match page background
         tempContainer.appendChild(clone);
         document.body.appendChild(tempContainer);
 
@@ -805,8 +951,8 @@
           link.click();
 
           // Restore visibility of buttons and header
-          buttons.forEach((button) => (button.style.display = "inline-block"));
-          header.style.display = "block";
+          buttons.forEach((button) => (button.style.display = ""));
+          header.style.display = "";
 
           // Remove the temporary container
           document.body.removeChild(tempContainer);
@@ -929,7 +1075,7 @@
 
         // Create a download link for the CSV
         const link = document.createElement("a");
-        const currentDate = new Date().toISOString().split("T")[0];
+        const currentDate = todayISO();
         const fileName = `plan-summary-${currentDate}.csv`;
 
         link.setAttribute("href", encodeURI(csvContent));
@@ -963,7 +1109,12 @@
 
           // Guard against invalid dates
           let durationText = "—";
-          if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+          const skipped = phaseRows.every(
+            (row) => row.querySelector(".slider-value")?.textContent.trim() === "0"
+          );
+          if (skipped) {
+            durationText = "0 days";
+          } else if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
             const msPerDay = 24 * 60 * 60 * 1000;
             const duration = Math.max(1, Math.round((end - start) / msPerDay) + 1);
             durationText = `${duration} days`;
@@ -972,9 +1123,9 @@
           const phaseClass = phase.toLowerCase().replace(/\s/g, "-");
           summaryBar.innerHTML += `
             <div class="summary-item ${phaseClass}">
-              <strong>${phase}</strong><br>
-              End Date: ${endStr}<br>
-              ${durationText}
+              <span class="summary-phase">${phase}</span>
+              <span class="summary-days">${durationText}</span>
+              <span class="summary-end"><i class="fa-regular fa-calendar"></i> ${endStr}</span>
             </div>
           `;
         });
@@ -1125,8 +1276,6 @@
           summaryTableHTML;
       }
 
-      updateInfoBar();
-      updateSummary();
     </script>
   </body>
 </html>

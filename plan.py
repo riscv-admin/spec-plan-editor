@@ -239,6 +239,7 @@ def calculate_schedule(
         phase_tasks = activities[phase]
         phase_start = None
         phase_end = None
+        phase_consumed_time = False
 
         # Process each task in the current phase
         for task_name, duration in phase_tasks:
@@ -295,6 +296,8 @@ def calculate_schedule(
             )
 
             # Track phase boundaries
+            if effective_duration > 0 or task_name == "BoD Approval":
+                phase_consumed_time = True
             if phase_start is None:
                 phase_start = start_date
             phase_end = end_date
@@ -311,7 +314,10 @@ def calculate_schedule(
 
         # Add phase summary if it has activities
         if phase_start and phase_end:
-            phase_duration = max(1, (phase_end - phase_start).days + 1)
+            # A skipped phase (every task zeroed by start_from) takes no time
+            phase_duration = (
+                (phase_end - phase_start).days + 1 if phase_consumed_time else 0
+            )
             summary_phases.append(
                 (
                     phase,
