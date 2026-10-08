@@ -470,6 +470,12 @@ def build_plan_summary(calculated_dates):
             "phase": "Ratification-Ready",
         },
         {
+            "label": "Public Review Completed (v0.9) by",
+            "dateType": "end",
+            "activity": "Public Review (30-day minimum)",
+            "phaseFilter": "Ratification-Ready",
+        },
+        {
             "label": "TSC Approval (v0.99) by",
             "dateType": "end",
             "phase": "Ratification-Ready",

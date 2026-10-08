@@ -146,9 +146,16 @@
         outline-offset: 2px;
       }
 
-      .btn i {
-        font-size: 0.85em;
+      .btn .icon {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
         color: var(--muted);
+      }
+
+      .btn.sm .icon {
+        width: 14px;
+        height: 14px;
       }
 
       .btn.primary {
@@ -157,8 +164,8 @@
         color: #fff;
       }
 
-      .btn.primary i {
-        color: rgba(255, 255, 255, 0.8);
+      .btn.primary .icon {
+        color: rgba(255, 255, 255, 0.85);
       }
 
       .btn.primary:hover {
@@ -202,6 +209,33 @@
         padding: 5px 10px;
         border-radius: 8px;
         font-size: 0.82rem;
+      }
+
+      .legend {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin: 0 4px 0 0;
+        padding: 0;
+        list-style: none;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .legend li {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+      }
+
+      .legend .icon {
+        width: 14px;
+        height: 14px;
+      }
+
+      .legend .approval-icon {
+        margin: 0;
       }
 
       .card-hint {
@@ -496,8 +530,8 @@
           </div>
         </div>
         <div class="button-container">
-          <button class="btn" onclick="saveImage()">
-            <i class="fa-solid fa-image"></i> Save Image
+          <button class="btn" onclick="saveImage()" title="Download the plan as a PNG image">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg> Save as PNG
           </button>
         </div>
       </header>
@@ -538,16 +572,15 @@
         <div class="card-header">
           <h2 class="card-title">Timeline</h2>
           <div class="card-actions">
-            <span class="card-hint">
-              Drag a slider to change an activity's duration ·
-              <i class="fa-solid fa-triangle-exclamation approval-icon" style="margin:0"></i>
-              approval step
-            </span>
-            <button class="btn sm" onclick="resetToDefault()">
-              <i class="fa-solid fa-rotate-left"></i> Reset
+            <ul class="legend" aria-label="Legend">
+              <li><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><path d="M14 2v4"/><path d="M8 10v4"/><path d="M16 18v4"/></svg> Drag to adjust duration</li>
+              <li><i class="fa-solid fa-triangle-exclamation approval-icon"></i> Approval or vote</li>
+            </ul>
+            <button class="btn sm" onclick="resetToDefault()" title="Restore default durations, start date and settings">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg> Reset
             </button>
-            <button class="btn sm primary" onclick="exportCSV()">
-              <i class="fa-solid fa-file-csv"></i> Export Detailed Plan
+            <button class="btn sm primary" onclick="exportCSV()" title="Download every activity with its dates as CSV">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg> Export Detailed Plan
             </button>
           </div>
         </div>
@@ -622,8 +655,8 @@
           <h2 class="card-title">Plan Summary</h2>
           <div class="card-actions">
             <span class="card-hint">Key milestones and target dates</span>
-            <button class="btn sm primary" onclick="savePlanSummary()">
-              <i class="fa-solid fa-list-check"></i> Export Summary
+            <button class="btn sm primary" onclick="savePlanSummary()" title="Download the milestones as CSV (input for update-dates.py)">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg> Export Summary
             </button>
           </div>
         </div>
@@ -1018,6 +1051,11 @@
             dateType: "start",
           },
           {
+            activity: "Public Review (30-day minimum)",
+            label: "Public Review Completed (v0.9) by",
+            dateType: "end",
+          },
+          {
             phase: "Ratification-Ready",
             label: "TSC Approval (v0.99) by",
             dateType: "end",
@@ -1186,6 +1224,12 @@
           {
             label: "Public Review Start (v0.9) by",
             dateType: "start",
+            phase: "Ratification-Ready",
+          },
+          {
+            label: "Public Review Completed (v0.9) by",
+            dateType: "end",
+            activity: "Public Review (30-day minimum)",
             phase: "Ratification-Ready",
           },
           {
