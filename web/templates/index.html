@@ -191,6 +191,19 @@
         font-weight: 600;
       }
 
+      .card-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .btn.sm {
+        padding: 5px 10px;
+        border-radius: 8px;
+        font-size: 0.82rem;
+      }
+
       .card-hint {
         color: var(--muted);
         font-size: 0.82rem;
@@ -483,17 +496,8 @@
           </div>
         </div>
         <div class="button-container">
-          <button class="btn" onclick="resetToDefault()">
-            <i class="fa-solid fa-rotate-left"></i> Reset
-          </button>
           <button class="btn" onclick="saveImage()">
             <i class="fa-solid fa-image"></i> Save Image
-          </button>
-          <button class="btn" onclick="savePlanSummary()">
-            <i class="fa-solid fa-list-check"></i> Export Summary
-          </button>
-          <button class="btn primary" onclick="exportCSV()">
-            <i class="fa-solid fa-file-csv"></i> Export Detailed Plan
           </button>
         </div>
       </header>
@@ -533,11 +537,19 @@
       <section class="card">
         <div class="card-header">
           <h2 class="card-title">Timeline</h2>
-          <span class="card-hint">
-            Drag a slider to change an activity's duration ·
-            <i class="fa-solid fa-triangle-exclamation approval-icon" style="margin:0"></i>
-            approval step
-          </span>
+          <div class="card-actions">
+            <span class="card-hint">
+              Drag a slider to change an activity's duration ·
+              <i class="fa-solid fa-triangle-exclamation approval-icon" style="margin:0"></i>
+              approval step
+            </span>
+            <button class="btn sm" onclick="resetToDefault()">
+              <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
+            <button class="btn sm primary" onclick="exportCSV()">
+              <i class="fa-solid fa-file-csv"></i> Export Detailed Plan
+            </button>
+          </div>
         </div>
         <div class="table-wrap">
           <table id="timeline-table">
@@ -608,7 +620,12 @@
       <section class="card">
         <div class="card-header">
           <h2 class="card-title">Plan Summary</h2>
-          <span class="card-hint">Key milestones and target dates</span>
+          <div class="card-actions">
+            <span class="card-hint">Key milestones and target dates</span>
+            <button class="btn sm primary" onclick="savePlanSummary()">
+              <i class="fa-solid fa-list-check"></i> Export Summary
+            </button>
+          </div>
         </div>
         <div id="summary-table-container" class="table-wrap"></div>
       </section>
@@ -919,7 +936,7 @@
 
       function saveImage() {
         // Hide the buttons and the header temporarily
-        const buttons = document.querySelectorAll(".button-container button");
+        const buttons = document.querySelectorAll(".btn");
         const header = document.querySelector(".app-header .titles");
 
         buttons.forEach((button) => (button.style.display = "none"));
