@@ -243,6 +243,22 @@
         font-size: 0.82rem;
       }
 
+      .row-note {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .row-note a {
+        color: var(--brand);
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      .row-note a:hover {
+        text-decoration: underline;
+      }
+
       .approval-icon {
         color: #ea580c;
         margin-left: 6px;
@@ -600,6 +616,7 @@
               calculated_dates %}
               <tr
                 data-phase="{{ phase }}"
+                data-activity="{{ activity }}"
                 class="{{ phase|lower|replace(' ', '-') }}"
                 data-default-duration="{{ duration }}"
               >
@@ -610,6 +627,12 @@
                     class="fa-solid fa-triangle-exclamation approval-icon"
                     title="Approval step"
                   ></i>
+                  {% endif %}
+                  {% if activity == "New Project Committee or Fast-Track Proposal" %}
+                  <div class="row-note">
+                    Proposing a new Task Group?
+                    <a href="https://tech.riscv.org/group-plan/" target="_blank" rel="noopener">Plan it in the Group Plan Editor</a>
+                  </div>
                   {% endif %}
                 </td>
                 <td class="start-date">
@@ -831,7 +854,7 @@
         let currentStartDate = new Date(inceptionStartDate);
 
         rows.forEach((row, index) => {
-          const activityName = row.querySelector("td:nth-child(2)").textContent.trim();
+          const activityName = row.dataset.activity;
           const slider = row.querySelector(".slider");
           const baseDuration = parseInt(slider?.value, 10) || 0;
 
@@ -941,10 +964,8 @@
           '"Phase","Activity","Start Date","End Date","Duration (Days)"\n';
 
         rows.forEach((row) => {
-          const phase = row.querySelector("td:nth-child(1)").textContent.trim();
-          const activity = row
-            .querySelector("td:nth-child(2)")
-            .textContent.trim();
+          const phase = row.dataset.phase;
+          const activity = row.dataset.activity;
           const startDate = readDateFromCell(row.querySelector(".start-date"));
           const endDate = row.querySelector(".end-date").textContent.trim();
           const duration = row.querySelector(".slider").value.trim();
@@ -1074,8 +1095,7 @@
           // Handle milestones linked to a specific activity
           if (milestone.activity) {
             relevantRow = Array.from(rows).find((row) => {
-              const activityText =
-                row.querySelector("td:nth-child(2)").textContent;
+              const activityText = row.dataset.activity;
               const phaseText = row.dataset.phase || "";
               return (
                 activityText.includes(milestone.activity) &&
@@ -1252,8 +1272,7 @@
           // Handle specific activity matching
           if (milestone.activity) {
             relevantRow = Array.from(rows).find((row) => {
-              const activityText =
-                row.querySelector("td:nth-child(2)").textContent;
+              const activityText = row.dataset.activity;
               const phaseText = row.dataset.phase || "";
               return (
                 activityText.includes(milestone.activity) &&
@@ -1282,8 +1301,7 @@
             ) {
               // Find the "Governing Committee Approval" activity specifically in the Development phase
               relevantRow = Array.from(rows).find((row) => {
-                const activityText =
-                  row.querySelector("td:nth-child(2)").textContent;
+                const activityText = row.dataset.activity;
                 const phaseText = row.dataset.phase || "";
                 return (
                   activityText.includes("Governing Committee Approval") &&
