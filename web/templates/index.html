@@ -87,6 +87,9 @@
         display: flex;
         align-items: center;
         gap: 18px;
+        /* Let the subtitle wrap so the buttons stay on the title row. */
+        flex: 1 1 320px;
+        min-width: 0;
       }
 
       .brand img {
@@ -139,6 +142,19 @@
       .btn:hover {
         background: var(--surface-muted);
         border-color: #cbd2e0;
+      }
+
+      /* Link to another RISC-V tool: brand-blue outline, like the dashboards. */
+      .btn.link-out {
+        border: 1.5px solid var(--brand);
+        color: var(--brand);
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      .btn.link-out:hover {
+        background: var(--brand);
+        color: #fff;
       }
 
       .btn:focus-visible {
@@ -546,6 +562,10 @@
           </div>
         </div>
         <div class="button-container">
+          <a class="btn link-out" href="https://tech.riscv.org/isa-explorer/" target="_blank" rel="noopener" title="RISC-V ISA Explorer">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+            ISA Explorer
+          </a>
           <button class="btn" onclick="saveImage()" title="Download the plan as a PNG image">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg> Save as PNG
           </button>
